@@ -141,5 +141,27 @@ describe("SanctionableToken", function () {
       expect(await sanctionableToken.balanceOf(user1)).to.equal(user1Balance);
       expect(await sanctionableToken.balanceOf(user2)).to.equal(0);
     });
+
+    it("Should allow transfers after sanctions have been lifted", async function () {
+      const { sanctionableToken, owner, user1, user2 } = await loadFixture(
+        deploySanctionableTokenFixture
+      );
+
+      await expect(sanctionableToken.sanction(user1)).not.be.reverted;
+      await expect(sanctionableToken.unSanction(user1)).not.be.reverted;
+      const transferAmount = 10;
+      await expect(sanctionableToken.transfer(user1, transferAmount)).not.to.be.reverted;
+      expect(await sanctionableToken.balanceOf(user1)).to.equal(transferAmount);
+    });
+  });
+
+  describe("Sanctioning", function () {
+    it("Should not allow anyone except owner to sanction", async function () {
+      const { sanctionableToken, owner, user1, user2 } = await loadFixture(
+        deploySanctionableTokenFixture
+      );
+
+      await expect(sanctionableToken.connect(user1).sanction(user2)).to.be.reverted;
+    });
   });
 });
