@@ -6,14 +6,18 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 // using SafeERC20 for IERC20;
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
+
 // import "openzeppelin-contracts-5.0.0/contracts/access/Ownable.sol";
 // import "@openzeppelin/contracts@5.0.0/access/Ownable.sol";
 
 // Uncomment this line to use console.log
 // import "hardhat/console.sol";
 
-contract SanctionableToken is ERC20, Ownable {
+contract SanctionableToken is ERC20, Ownable2Step {
     mapping(address => bool) private sanctioned;
+
+    // TODO add events?
 
     constructor(
         string memory name,
