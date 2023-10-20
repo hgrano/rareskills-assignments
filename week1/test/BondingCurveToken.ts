@@ -53,6 +53,14 @@ describe("BondingCurveToken", function () {
       const gasSpend = txReceipt.gasPrice * txReceipt.gasUsed;
       expect(await ethers.provider.getBalance(user1)).to.equal(user1InitialBalance - BigInt(1e6) - gasSpend);
     });
+
+    it("Should update price after one purchase", async function() {
+      const { bondingCurveToken, user1, user2 } = await loadFixture(deployBondingCurveTokenFixture);
+
+      await expect(bondingCurveToken.connect(user1).buy(1e3, { value: 1e6 })).to.not.be.reverted;
+      await expect(bondingCurveToken.connect(user1).buy(1, { value: 2e3 + 1 })).to.not.be.reverted;
+      expect(await bondingCurveToken.balanceOf(user1)).to.equal(1e3 + 1);
+    });
   });
 
   describe("Selling", function() {
@@ -78,5 +86,20 @@ describe("BondingCurveToken", function () {
       const gasSpend = buyTxReceipt.gasPrice * buyTxReceipt.gasUsed + sellTxReceipt.gasPrice * sellTxReceipt.gasUsed;
       expect(await ethers.provider.getBalance(user1)).to.equal(user1InitialBalance - gasSpend);
     });
+
+    it("Should not permit selling without sufficient balance", async function() {
+      const { bondingCurveToken, user1 } = await loadFixture(deployBondingCurveTokenFixture);
+
+      await expect(bondingCurveToken.connect(user1).sell(1, 0)).to.be.reverted;
+    });
+
+    it("Should limit price slippage when selling", async function() {
+      const { bondingCurveToken, user1 } = await loadFixture(deployBondingCurveTokenFixture);
+
+      await expect(bondingCurveToken.connect(user1).buy(1e3, { value: 1e6 })).to.not.be.reverted;
+      await expect(bondingCurveToken.connect(user1).sell(1e3, 1e6 + 1)).to.be.reverted;
+    });
   });
+
+  // TODO test overflow
 });

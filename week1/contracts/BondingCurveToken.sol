@@ -36,6 +36,7 @@ contract BondingCurveToken is ERC20 {
     }
 
     function sell(uint256 quantity, uint256 minProceeds) external {
+        // TODO gas cost optimization
         uint256 proceeds = slope * (2 * totalSupply() * quantity - quantity * quantity) / 2;
         require(proceeds >= minProceeds, "Must meet minimum allowed proceeds");
         _burn(msg.sender, quantity);
