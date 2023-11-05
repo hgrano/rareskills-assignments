@@ -1,24 +1,22 @@
 // SPDX-License-Identifier: ISC
 pragma solidity 0.8.20;
 
-// TODO fix version
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-// using SafeERC20 for IERC20;
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
-// import "openzeppelin-contracts-5.0.0/contracts/access/Ownable.sol";
-// import "@openzeppelin/contracts@5.0.0/access/Ownable.sol";
-
-// Uncomment this line to use console.log
-// import "hardhat/console.sol";
-
+/// @title Sanctionable Token
+/// @author Huw Grano
+/// @notice A fungible token which allows the contract owner to sanction address, preventing these addresses from
+/// sending or receiving tokens
 contract SanctionableToken is ERC20, Ownable2Step {
     mapping(address => bool) private sanctioned;
 
-    // TODO add events?
-
+    /// @param name Descriptive name for this token
+    /// @param symbol ERC20 symbol for this token
+    /// @param initialOwner The address to receive the initial supply of tokens and who will be the contract owner
+    /// @param initialSupply The initial quantity of tokens
     constructor(
         string memory name,
         string memory symbol,
@@ -28,10 +26,16 @@ contract SanctionableToken is ERC20, Ownable2Step {
         _mint(initialOwner, initialSupply);
     }
 
+    /// @notice Sanction an address making it unable to send or receive tokens
+    /// @dev reverts if not called by the contract owner
+    /// @param toSanction The address to be sanctioned
     function sanction(address toSanction) public onlyOwner {
         sanctioned[toSanction] = true;
     }
 
+    /// @notice Lift sanctions on address
+    /// @dev reverts if not called by the contract owner
+    /// @param toUnSanction The address to remove sanctions from
     function unSanction(address toUnSanction) public onlyOwner {
         delete sanctioned[toUnSanction];
     }

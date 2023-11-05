@@ -32,11 +32,11 @@ describe("UntrustedEscrow", function () {
       const escrowId = 0;
       const value = 10;
       await expect(basicERC20.connect(user1).approve(untrustedEscrow, value)).to.not.be.reverted;
-      await expect(untrustedEscrow.connect(user1).escrow(escrowId, basicERC20, user2, value, value)).to.not.be.reverted;
+      await expect(untrustedEscrow.connect(user1).escrow(escrowId, basicERC20, user2, value)).to.not.be.reverted;
       const unlockTime = (await time.latest()) + THREE_DAYS_IN_SECS;
       await expect(
         untrustedEscrow.connect(user2).withdraw(escrowId)
-      ).to.be.revertedWith("Can only withdraw after the unlock time");
+      ).to.be.revertedWith("UntrustedEscrow: can only withdraw after the unlock time");
       await time.increaseTo(unlockTime);
       await expect(untrustedEscrow.connect(user2).withdraw(escrowId)).to.changeTokenBalances(
         basicERC20,
@@ -55,7 +55,7 @@ describe("UntrustedEscrow", function () {
 
       await feeOnTransfer.connect(user1).approve(untrustedEscrow, value + fee);
       await expect(
-        untrustedEscrow.connect(user1).escrow(escrowId, feeOnTransfer, user2, value, value + fee)
+        untrustedEscrow.connect(user1).escrow(escrowId, feeOnTransfer, user2, value + fee)
       ).to.not.be.reverted;
       const unlockTime = (await time.latest()) + THREE_DAYS_IN_SECS;
       await time.increaseTo(unlockTime);
@@ -65,67 +65,5 @@ describe("UntrustedEscrow", function () {
         [-value, value - 5]
       );
     });
-
-    // it("Should send refund", async function () {
-    //   const { bondingCurveToken, user1 } = await loadFixture(deployBondingCurveTokenFixture);
-
-    //   const user1InitialBalance = await ethers.provider.getBalance(user1);
-    //   const tx = await bondingCurveToken.connect(user1).buy(1e3, { value: 1e6 + 1 });
-    //   const txReceipt = await tx.wait();
-    //   if (txReceipt == null) {
-    //     throw Error("Tx receipt is null");
-    //   }
-    //   expect(await bondingCurveToken.balanceOf(user1)).to.equal(1e3);
-    //   const gasSpend = txReceipt.gasPrice * txReceipt.gasUsed;
-    //   expect(await ethers.provider.getBalance(user1)).to.equal(user1InitialBalance - BigInt(1e6) - gasSpend);
-    // });
-
-    // it("Should update price after one purchase", async function() {
-    //   const { bondingCurveToken, user1, user2 } = await loadFixture(deployBondingCurveTokenFixture);
-
-    //   await expect(bondingCurveToken.connect(user1).buy(1e3, { value: 1e6 })).to.not.be.reverted;
-    //   await expect(bondingCurveToken.connect(user1).buy(1, { value: 2e3 + 1 })).to.not.be.reverted;
-    //   expect(await bondingCurveToken.balanceOf(user1)).to.equal(1e3 + 1);
-    // });
   });
-
-  // describe("Selling", function() {
-  //   it("Should allow selling up to maximum available supply", async function () {
-  //     const { bondingCurveToken, user1 } = await loadFixture(deployBondingCurveTokenFixture);
-
-  //     const user1InitialBalance = await ethers.provider.getBalance(user1);
-  //     const buyTx = await bondingCurveToken.connect(user1).buy(1e3, { value: 1e6 });
-  //     const buyTxReceipt = await buyTx.wait();
-  //     if (buyTxReceipt == null) {
-  //       throw Error("Tx receipt is null");
-  //     }
-  //     const sellTx = await bondingCurveToken.connect(user1).sell(1e3, 0);
-  //     const sellTxReceipt = await sellTx.wait();
-  //     if (sellTxReceipt == null) {
-  //       throw Error("Tx receipt is null");
-  //     }
-
-  //     expect(await bondingCurveToken.totalSupply()).to.equal(0);
-  //     expect(await ethers.provider.getBalance(bondingCurveToken)).to.equal(0);
-
-  //     expect(await bondingCurveToken.balanceOf(user1)).to.equal(0);
-  //     const gasSpend = buyTxReceipt.gasPrice * buyTxReceipt.gasUsed + sellTxReceipt.gasPrice * sellTxReceipt.gasUsed;
-  //     expect(await ethers.provider.getBalance(user1)).to.equal(user1InitialBalance - gasSpend);
-  //   });
-
-  //   it("Should not permit selling without sufficient balance", async function() {
-  //     const { bondingCurveToken, user1 } = await loadFixture(deployBondingCurveTokenFixture);
-
-  //     await expect(bondingCurveToken.connect(user1).sell(1, 0)).to.be.reverted;
-  //   });
-
-  //   it("Should limit price slippage when selling", async function() {
-  //     const { bondingCurveToken, user1 } = await loadFixture(deployBondingCurveTokenFixture);
-
-  //     await expect(bondingCurveToken.connect(user1).buy(1e3, { value: 1e6 })).to.not.be.reverted;
-  //     await expect(bondingCurveToken.connect(user1).sell(1e3, 1e6 + 1)).to.be.reverted;
-  //   });
-  // });
-
-  // TODO test overflow
 });
