@@ -10,6 +10,8 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 contract BondingCurveToken is ERC20 {
     uint256 private m;
     uint256 private c;
+    uint256 private cooldown;
+    mapping(address => uint256) private lastBuys;
 
     event TokenPurchase(address indexed buyer, uint256 quantity, uint256 cost);
     event TokenSale(address indexed seller, uint256 quantity, uint256 proceeds);
@@ -18,14 +20,17 @@ contract BondingCurveToken is ERC20 {
     /// @param symbol ERC20 symbol for this token
     /// @param _m The slope constant
     /// @param _c The offset constant
+    /// @param _cooldown The minimum period buyers must wait before selling their tokens
     constructor(
         string memory name,
         string memory symbol,
         uint256 _m,
-        uint256 _c
+        uint256 _c,
+        uint256 _cooldown
     ) ERC20(name, symbol) {
         m = _m;
         c = _c;
+        cooldown = _cooldown;
     }
 
     /// @notice Purchase the specified quantity of tokens. If the amount of Ether sent is more than required for this
@@ -42,6 +47,7 @@ contract BondingCurveToken is ERC20 {
         unchecked {
             leftOver = msg.value - cost;
         }
+        lastBuys[msg.sender] = block.timestamp;
         _mint(msg.sender, quantity);
         if (leftOver > 0) {
             (bool sent,) = msg.sender.call{value: leftOver}("");
@@ -52,10 +58,15 @@ contract BondingCurveToken is ERC20 {
 
     /// @notice Sell a given quantity of tokens with a floor price
     /// @dev emits a TokenSale event
+    /// @dev reverts if the seller bought tokens recently (within the cooldown window)
     /// @dev reverts if the proceeds of sale are less than the `minProceeds`
     /// @param quantity The quantity of tokens to sell
     /// @param minProceeds The minimum required proceeds of the sale
     function sell(uint256 quantity, uint256 minProceeds) external {
+        require(
+            block.timestamp > lastBuys[msg.sender] + cooldown,
+            "BondingCurveToken: Can only sell after the cooldown"
+        );
         uint256 mq = m * quantity;
         uint256 mq2_over2 = (mq * quantity) >> 1;
         uint256 proceeds = totalSupply() * mq - mq2_over2 + c * quantity;

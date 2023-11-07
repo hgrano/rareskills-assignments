@@ -64,8 +64,6 @@ describe("SanctionableToken", function () {
     });
   });
 
-  // TODO test transferFrom, maybe also approve?
-
   describe("Sanctioning", function () {
     it("Should not allow anyone except owner to sanction", async function () {
       const { sanctionableToken, user1, user2 } = await loadFixture(
