@@ -8,8 +8,8 @@ import { Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
 /// @title Sanctionable Token
 /// @author Huw Grano
-/// @notice A fungible token which allows the contract owner to sanction address, preventing these addresses from
-/// sending or receiving tokens
+/// @notice A fungible token which allows the contract owner to sanction address, preventing these sanctioned addresses
+/// from sending or receiving tokens
 contract SanctionableToken is ERC20, Ownable2Step {
     mapping(address => bool) private sanctioned;
 

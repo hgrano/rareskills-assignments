@@ -3,11 +3,7 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 
 describe("SanctionableToken", function () {
-  // We define a fixture to reuse the same setup in every test.
-  // We use loadFixture to run this setup once, snapshot that state,
-  // and reset Hardhat Network to that snapshot in every test.
   async function deploySanctionableTokenFixture() {
-    // Contracts are deployed using the first signer/account by default
     const [owner, user1, user2] = await ethers.getSigners();
 
     const SanctionableToken = await ethers.getContractFactory("SanctionableToken");
@@ -18,7 +14,7 @@ describe("SanctionableToken", function () {
 
   describe("Transfers", function () {
     it("Should allow transfers to addresses which are not sanctioned", async function () {
-      const { sanctionableToken, owner, user1, user2 } = await loadFixture(
+      const { sanctionableToken, user1 } = await loadFixture(
         deploySanctionableTokenFixture
       );
 
@@ -28,7 +24,7 @@ describe("SanctionableToken", function () {
     });
 
     it("Should not allow transfers to addresses which are sanctioned", async function () {
-      const { sanctionableToken, owner, user1, user2 } = await loadFixture(
+      const { sanctionableToken, user1 } = await loadFixture(
         deploySanctionableTokenFixture
       );
 
@@ -41,7 +37,7 @@ describe("SanctionableToken", function () {
     });
 
     it("Should not allow transfers from addresses which are sanctioned", async function () {
-      const { sanctionableToken, owner, user1, user2 } = await loadFixture(
+      const { sanctionableToken, user1, user2 } = await loadFixture(
         deploySanctionableTokenFixture
       );
 
@@ -56,7 +52,7 @@ describe("SanctionableToken", function () {
     });
 
     it("Should allow transfers after sanctions have been lifted", async function () {
-      const { sanctionableToken, owner, user1, user2 } = await loadFixture(
+      const { sanctionableToken, user1 } = await loadFixture(
         deploySanctionableTokenFixture
       );
 
@@ -72,7 +68,7 @@ describe("SanctionableToken", function () {
 
   describe("Sanctioning", function () {
     it("Should not allow anyone except owner to sanction", async function () {
-      const { sanctionableToken, owner, user1, user2 } = await loadFixture(
+      const { sanctionableToken, user1, user2 } = await loadFixture(
         deploySanctionableTokenFixture
       );
 

@@ -14,22 +14,11 @@ approve another address to spend on their behalf.
 ERC777 presents the opportunity for an attacker to register a malicious callback function to be called when tokens are
 transfered to them. The callback function can be re-entrant allowing an attacker to exploit vulnerabilities in contracts
 which send them tokens. Another problem is that the callback function cannot know who the actual `msg.sender` was that
-sent them the tokens and so the value of `operator` can be manipulated whoever calls the callback.
+sent them the tokens and so the value of `operator` can be manipulated by whoever calls the callback.
 
 ## SafeERC20
 
 The issue with calling the standard ERC20 methods on an aribitrary contract is that the contract may not correctly
-implement the API. The SafeERC20 handles cases where the contract does not return a boolean value and signals failure
-via an exception/revert.
-
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a script that deploys that contract.
-
-Try running some of the following tasks:
-
-```shell
-npx hardhat help
-npx hardhat test
-REPORT_GAS=true npx hardhat test
-npx hardhat node
-npx hardhat run scripts/deploy.ts
-```
+implement the API. The SafeERC20 handles cases where the contract does not return a boolean value. Instead of returning
+a boolean, the SafeERC20 methods revert on error, this allows SafeERC20 to work with non-standard tokens that revert
+on errors instead of returning a boolean.

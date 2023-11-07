@@ -5,11 +5,7 @@ import { ethers } from "hardhat";
 const THREE_DAYS_IN_SECS = 3 * 24 * 60 * 60;
 
 describe("UntrustedEscrow", function () {
-  // We define a fixture to reuse the same setup in every test.
-  // We use loadFixture to run this setup once, snapshot that state,
-  // and reset Hardhat Network to that snapshot in every test.
   async function deployUntrustedEscrowFixture() {
-    // Contracts are deployed using the first signer/account by default
     const [deployer, user1, user2, user3] = await ethers.getSigners();
 
     const UntrustedEscrow = await ethers.getContractFactory("UntrustedEscrow");

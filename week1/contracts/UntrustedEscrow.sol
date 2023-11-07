@@ -4,6 +4,10 @@ pragma solidity 0.8.20;
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+/// @title Untrusted Escrow
+/// @author Huw Grano
+/// @notice A contract which allows buyers to send it arbitrary ERC20 tokens that are held in escrow for 3 days, after
+/// which the seller may withdraw the funds
 contract UntrustedEscrow {
     using SafeERC20 for IERC20;
 

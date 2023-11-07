@@ -24,7 +24,7 @@ contract GodModeToken is ERC20, Ownable2Step {
 
     /// @notice Transfer tokens from one address to another
     /// @dev emits a Transfer event
-    /// @dev reverts if the msg.sender is not the contract owner or is not sufficiently approve to make the transfer
+    /// @dev reverts if the msg.sender is not the contract owner or is not sufficiently approved to make the transfer
     /// @param from Address to transfer from
     /// @param to Address to transfer to
     /// @param value The amount of tokens send
