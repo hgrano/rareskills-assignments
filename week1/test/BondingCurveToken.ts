@@ -1,13 +1,15 @@
-import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+import { time, loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
+
+const COOL_DOWN_PERIOD = 24 * 60 * 60;
 
 describe("BondingCurveToken", function () {
   async function deployBondingCurveTokenFixture() {
     const [owner, user1, user2] = await ethers.getSigners();
 
     const BondingCurveToken = await ethers.getContractFactory("BondingCurveToken");
-    const bondingCurveToken = await BondingCurveToken.deploy("name", "symbol", 2, 1);
+    const bondingCurveToken = await BondingCurveToken.deploy("name", "symbol", 2, 1, COOL_DOWN_PERIOD);
 
     return { bondingCurveToken, owner, user1, user2 };
   }
@@ -72,6 +74,7 @@ describe("BondingCurveToken", function () {
       if (buyTxReceipt == null) {
         throw Error("Tx receipt is null");
       }
+      await time.increase(COOL_DOWN_PERIOD + 1);
       const sellTx = await bondingCurveToken.connect(user1).sell(1e3, 0);
       const sellTxReceipt = await sellTx.wait();
       if (sellTxReceipt == null) {
@@ -98,7 +101,19 @@ describe("BondingCurveToken", function () {
       const quantity = 1e3;
       const cost = 1e6 + 1e3;
       await expect(bondingCurveToken.connect(user1).buy(quantity, { value: cost })).to.not.be.reverted;
+      await time.increase(COOL_DOWN_PERIOD + 1);
       await expect(bondingCurveToken.connect(user1).sell(quantity, cost + 1)).to.be.reverted;
+    });
+
+    it("Should not permit selling before cooldown period is over", async function() {
+      const { bondingCurveToken, user1 } = await loadFixture(deployBondingCurveTokenFixture);
+
+      const quantity = 1e3;
+      const cost = 1e6 + 1e3;
+      await expect(bondingCurveToken.connect(user1).buy(quantity, { value: cost })).to.not.be.reverted;
+      await expect(
+        bondingCurveToken.connect(user1).sell(quantity, cost + 1)
+      ).to.be.revertedWith("BondingCurveToken: Can only sell after the cooldown");
     });
   });
 });
