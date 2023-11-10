@@ -1,0 +1,3 @@
+[submodule "week2/nfts-and-staking/lib/forge-std"]
+	path = week2/nfts-and-staking/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
