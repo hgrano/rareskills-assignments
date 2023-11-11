@@ -19,7 +19,11 @@ contract NFTWithMerkleDiscount is ERC721, ERC2981, Ownable2Step {
         bytes32 merkleRoot_
     ) Ownable(owner_) ERC721(name_, symbol_) {
         merkleRoot = merkleRoot_;
-        _setDefaultRoyalty(address(this), 25);
+        _setDefaultRoyalty(address(this), 250);
+    }
+
+    function mint(address to, uint256 tokenId) external onlyOwner {
+        _safeMint(to, tokenId);
     }
 
     function mintFromMerkleProof(uint256 index, address to, uint256 tokenId, bytes32[] calldata proof) external {

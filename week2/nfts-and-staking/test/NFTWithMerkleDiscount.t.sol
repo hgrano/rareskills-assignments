@@ -55,6 +55,15 @@ contract NFTWithMerkleDiscountTest is Test {
         nft.mintFromMerkleProof(0, to0, tokenId0, proof);
     }
 
+    function test_supportsERC2981() public {
+        assertTrue(nft.supportsInterface(0x2a55205a));
+        address receiver;
+        uint256 royaltyAmount;
+        (receiver, royaltyAmount) = nft.royaltyInfo(99, 2000);
+        assertEq(receiver, address(nft));
+        assertEq(royaltyAmount, 50);
+    }
+
     function hashPair(bytes32 a, bytes32 b) private pure returns (bytes32) {
         if (a < b) {
             return keccak256(abi.encodePacked(a, b));
