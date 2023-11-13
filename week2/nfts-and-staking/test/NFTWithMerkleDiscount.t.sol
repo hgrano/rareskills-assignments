@@ -17,10 +17,10 @@ contract NFTWithMerkleDiscountTest is Test {
     uint256 tokenId2 = 102;
     uint256 tokenId3 = 103;
 
-    bytes32 leaf0 = keccak256(abi.encodePacked(int(0), to0, tokenId0));
-    bytes32 leaf1 = keccak256(abi.encodePacked(int(1), to1, tokenId1));
-    bytes32 leaf2 = keccak256(abi.encodePacked(int(2), to2, tokenId2));
-    bytes32 leaf3 = keccak256(abi.encodePacked(int(3), to3, tokenId3));
+    bytes32 leaf0 = keccak256(abi.encodePacked(int256(0), to0, tokenId0));
+    bytes32 leaf1 = keccak256(abi.encodePacked(int256(1), to1, tokenId1));
+    bytes32 leaf2 = keccak256(abi.encodePacked(int256(2), to2, tokenId2));
+    bytes32 leaf3 = keccak256(abi.encodePacked(int256(3), to3, tokenId3));
     bytes32 parent0 = hashPair(leaf0, leaf1);
     bytes32 parent1 = hashPair(leaf2, leaf3);
     bytes32 root = hashPair(parent0, parent1);
