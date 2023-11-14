@@ -31,11 +31,14 @@ contract RewardDistributor is IERC721Receiver {
 
     function claimRewards(uint256 tokenId) external {
         StakeInfo memory stake = stakes[tokenId];
-        uint256 elapsed = block.timestamp - stake.lastCheckpoint;
-        uint256 numDays = elapsed / (1 days);
-        uint256 nextCheckPoint = block.timestamp - (elapsed % (1 days));
-        stakes[tokenId].lastCheckpoint = nextCheckPoint;
-        rewardToken.mint(stake.owner, numDays * 10);
+        require(stake.owner != address(0), "RewardDistributor: token is not staked");
+        unchecked {
+            uint256 elapsed = block.timestamp - stake.lastCheckpoint;
+            uint256 numDays = elapsed / (1 days);
+            uint256 nextCheckPoint = block.timestamp - (elapsed % (1 days));
+            stakes[tokenId].lastCheckpoint = nextCheckPoint;
+            rewardToken.mint(stake.owner, numDays * 10);
+        }
     }
 
     function withdraw(uint256 tokenId) external {

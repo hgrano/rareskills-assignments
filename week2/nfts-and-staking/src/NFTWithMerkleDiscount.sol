@@ -35,4 +35,9 @@ contract NFTWithMerkleDiscount is ERC721, ERC2981, Ownable2Step {
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721, ERC2981) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
+
+    function withdrawFunds() external onlyOwner {
+        (bool sent,) = owner.call{value: address(this).balance}("");
+        require(sent, "NFTWithMerkleDiscount: Failed to send funds to the owner");
+    }
 }

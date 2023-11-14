@@ -5,7 +5,7 @@ import {Test, console2} from "forge-std/Test.sol";
 import {NFTWithMerkleDiscount} from "../src/NFTWithMerkleDiscount.sol";
 
 contract NFTWithMerkleDiscountTest is Test {
-    NFTWithMerkleDiscount public nft;
+    NFTWithMerkleDiscount nft;
     address owner = address(1);
     address to0 = address(2);
     address to1 = address(3);
