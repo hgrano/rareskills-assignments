@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity 0.8.21;
 
 import {Test, console2} from "forge-std/Test.sol";
 import {NFTWithMerkleDiscount} from "../src/NFTWithMerkleDiscount.sol";
@@ -60,5 +60,8 @@ contract RewardDistributorTest is Test {
         vm.prank(to0);
         rewardDistributor.withdraw(0);
         assertEq(nft.ownerOf(0), to0, "Must return the nft to the original owner");
+        vm.expectRevert("RewardDistributor: token is not staked");
+        vm.prank(to0);
+        rewardDistributor.claimRewards(0);
     }
 }

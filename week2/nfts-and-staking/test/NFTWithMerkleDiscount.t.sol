@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity 0.8.21;
 
 import {Test, console2} from "forge-std/Test.sol";
 import {NFTWithMerkleDiscount} from "../src/NFTWithMerkleDiscount.sol";
@@ -33,7 +33,16 @@ contract NFTWithMerkleDiscountTest is Test {
         bytes32[] memory proof = new bytes32[](2);
         proof[0] = leaf1;
         proof[1] = parent1;
+        // Gas: 73436
         nft.mintFromMerkleProof(0, to0, tokenId0, proof);
+        assertEq(nft.balanceOf(to0), 1);
+        assertEq(nft.ownerOf(tokenId0), to0);
+    }
+
+    function test_standardMint() public {
+        vm.prank(owner);
+        // Gas: 49652
+        nft.mint(to0, tokenId0);
         assertEq(nft.balanceOf(to0), 1);
         assertEq(nft.ownerOf(tokenId0), to0);
     }
