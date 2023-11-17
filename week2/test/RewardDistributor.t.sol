@@ -12,9 +12,6 @@ contract RewardDistributorTest is Test {
     RewardDistributor rewardDistributor;
     address owner = address(1);
     address to0 = address(2);
-    address to1 = address(3);
-    address to2 = address(4);
-    address to3 = address(5);
 
     function setUp() public {
         nft = new NFTWithMerkleDiscount("name", "symbol", address(this), 0);
