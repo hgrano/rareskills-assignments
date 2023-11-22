@@ -7,6 +7,3 @@
 [submodule "uniswap-clone/lib/forge-std"]
 	path = uniswap-clone/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
-[submodule "lib/solady"]
-	path = lib/solady
-	url = https://github.com/vectorized/solady
