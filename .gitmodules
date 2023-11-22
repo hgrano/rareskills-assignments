@@ -10,3 +10,6 @@
 [submodule "uniswap-clone/lib/solady"]
 	path = uniswap-clone/lib/solady
 	url = https://github.com/vectorized/solady
+[submodule "uniswap-clone/lib/openzeppelin-contracts"]
+	path = uniswap-clone/lib/openzeppelin-contracts
+	url = https://github.com/openzeppelin/openzeppelin-contracts
