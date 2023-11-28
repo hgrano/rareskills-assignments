@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import {ERC20} from "solady/tokens/ERC20.sol";
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -26,6 +27,8 @@ contract Pair is ERC20, ReentrancyGuard {
         uint256 amount1Out,
         address indexed to
     );
+
+    uint256 public constant MIN_LIQUIDITY = 1000;
 
     string private _name;
     string private _symbol;
@@ -61,6 +64,14 @@ contract Pair is ERC20, ReentrancyGuard {
         uint256 amount1Min,
         address to
     ) external nonReentrant {
+        uint256 totalSupply_ = totalSupply();
+
+        if (totalSupply_ == 0) {
+            _mint(to, FixedPointMathLib.sqrt(amount0Approved * amount1Approved) - MIN_LIQUIDITY);
+            _mint(address(0), MIN_LIQUIDITY);
+            return;
+        }
+
         uint256 reserve0_ = _reserve0;
         uint256 reserve1_ = _reserve1;
         uint256 amount1ImpliedByApproval = (reserve1_ * amount0Approved) / reserve0_;
@@ -79,7 +90,7 @@ contract Pair is ERC20, ReentrancyGuard {
             }
             amount0ToUse = amount0Approved;
         }
-    
+
         address token0_ = _token0;
         address token1_ = _token1;
 
@@ -93,7 +104,6 @@ contract Pair is ERC20, ReentrancyGuard {
 
         _reserve0 += uint112(actualAmount0);
         _reserve1 += uint112(actualAmount1);
-        uint256 totalSupply_ = totalSupply();
         uint256 liquidity0 = (actualAmount0 * totalSupply_) / reserve0_;
         uint256 liquidity1 = (actualAmount1 * totalSupply_) / reserve1_;
         if (liquidity0 < liquidity1) {
