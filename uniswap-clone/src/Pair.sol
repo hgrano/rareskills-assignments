@@ -6,6 +6,7 @@ import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "forge-std/console.sol";
 
 contract Pair is ERC20, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -39,8 +40,8 @@ contract Pair is ERC20, ReentrancyGuard {
     uint112 private _reserve0;
     uint112 private _reserve1;
 
-    uint256 private constant decimalMultiplier = 1000;
-    uint256 private constant multiplerWithFee = 997;
+    uint256 private constant DECIMAL_MULTIPLIER = 1000;
+    uint256 private constant FEE_MULTIPLIER = 997;
 
     function name() public view override returns (string memory) {
         return _name;
@@ -65,10 +66,16 @@ contract Pair is ERC20, ReentrancyGuard {
         address to
     ) external nonReentrant {
         uint256 totalSupply_ = totalSupply();
+        address token0_ = _token0;
+        address token1_ = _token1;
 
         if (totalSupply_ == 0) {
             _mint(to, FixedPointMathLib.sqrt(amount0Approved * amount1Approved) - MIN_LIQUIDITY);
             _mint(address(0), MIN_LIQUIDITY);
+            IERC20(token0_).safeTransferFrom(msg.sender, address(this), amount0Approved);
+            IERC20(token1_).safeTransferFrom(msg.sender, address(this), amount1Approved);
+            _reserve0 = uint112(IERC20(token0_).balanceOf(address(this)));
+            _reserve1 = uint112(IERC20(token1_).balanceOf(address(this)));
             return;
         }
 
@@ -90,9 +97,6 @@ contract Pair is ERC20, ReentrancyGuard {
             }
             amount0ToUse = amount0Approved;
         }
-
-        address token0_ = _token0;
-        address token1_ = _token1;
 
         uint256 initialBalance0 = IERC20(token0_).balanceOf(address(this));
         IERC20(token0_).safeTransferFrom(msg.sender, address(this), amount0ToUse);
@@ -170,17 +174,22 @@ contract Pair is ERC20, ReentrancyGuard {
         IERC20(fromToken).safeTransferFrom(msg.sender, address(this), amountIn);
         uint256 finalBalanceFrom = IERC20(fromToken).balanceOf(address(this));
         uint256 actualAmountIn = finalBalanceFrom - initialBalanceFrom;
-        uint256 actualAmountInWithFee = actualAmountIn * multiplerWithFee;
+        console.log("Actual tokens in: %e", actualAmountIn);
+        uint256 actualAmountInSubFee = actualAmountIn * FEE_MULTIPLIER;
 
         uint256 amountOut =
-            actualAmountInWithFee * toReserve / (fromReserve * decimalMultiplier + actualAmountInWithFee);
+            (actualAmountInSubFee * toReserve) /
+            (fromReserve * DECIMAL_MULTIPLIER + actualAmountInSubFee);
         require(amountOut >= amoutOutMin, "Amount out must meet the slippage threshold");
         IERC20(toToken).safeTransfer(to, amountOut);
+        console.log("Transfered %d tokens out", amountOut);
         uint256 finalBalanceTo = IERC20(toToken).balanceOf(address(this));
-        uint256 actualAmountOut = finalBalanceTo - initialBalanceTo;
+        uint256 actualAmountOut = initialBalanceTo - finalBalanceTo;
 
         if (side) {
+            console.log("Got here 1");
             _reserve1 += uint112(actualAmountIn);
+            console.log("Got here 1");
             _reserve0 -= uint112(actualAmountOut);
 
             // emit Swap(
@@ -192,8 +201,12 @@ contract Pair is ERC20, ReentrancyGuard {
             //     address indexed to
             // );
         } else {
+            console.log("Got here 1a");
             _reserve0 += uint112(actualAmountIn);
+            console.log("Got here 2a");
             _reserve1 -= uint112(actualAmountOut);
         }
     }
+
+    //function _updateReserves(uint256 newReserve0, uint256 )
 }
