@@ -28,6 +28,26 @@ contract PairTest is Test {
         assertEq(token1.balanceOf(address(pair)), token1In, "Must transfer token1 tokens to the pair");
     }
 
+    function test_removeLiquidity() public {
+        uint256 token0In = 5 ether;
+        uint256 token1In = 20 ether;
+        pair.addLiquidity(token0In, token1In, 0, 0, address(this));
+        uint256 initialToken0Balance = token0.balanceOf(address(this));
+        uint256 initialToken1Balance = token1.balanceOf(address(this));
+        pair.removeLiquidity(2 ether, 0, 0, address(this));
+        assertEq(pair.balanceOf(address(this)), 8 ether - 1000, "Must have expected reduction in LP's balance");
+        assertEq(
+            token0.balanceOf(address(this)),
+            initialToken0Balance + 1 ether,
+            "Must have expected increase in LP's token 0 balance"
+        );
+        assertEq(
+            token1.balanceOf(address(this)),
+            initialToken1Balance + 4 ether,
+            "Must have expected increase in LP's token 1 balance"
+        );
+    }
+
     function test_swap() public {
         pair.addLiquidity(50 ether, 200 ether, 0, 0, address(this));
         uint256 initialToken0Balance = token0.balanceOf(address(this));

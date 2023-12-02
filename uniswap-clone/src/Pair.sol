@@ -17,6 +17,7 @@ contract Pair is ERC20, ReentrancyGuard {
     error RemoveLiquidityDoesNotMeetMinimum1Out();
     error AddLiquidityDoesNotMeetMinimumAmount0();
     error AddLiquidityDoesNotMeetMinimumAmount1();
+    error OverflowReserves();
 
     event Mint(address indexed sender, uint256 amount0, uint256 amount1);
     event Burn(address indexed sender, uint256 amount0, uint256 amount1, address indexed to);
@@ -42,6 +43,8 @@ contract Pair is ERC20, ReentrancyGuard {
 
     uint256 private constant DECIMAL_MULTIPLIER = 1000;
     uint256 private constant FEE_MULTIPLIER = 997;
+
+    uint256 private constant MAX_UINT_112 = 2 ** 112 - 1;
 
     function name() public view override returns (string memory) {
         return _name;
@@ -74,8 +77,7 @@ contract Pair is ERC20, ReentrancyGuard {
             _mint(address(0), MIN_LIQUIDITY);
             IERC20(token0_).safeTransferFrom(msg.sender, address(this), amount0Approved);
             IERC20(token1_).safeTransferFrom(msg.sender, address(this), amount1Approved);
-            _reserve0 = uint112(IERC20(token0_).balanceOf(address(this)));
-            _reserve1 = uint112(IERC20(token1_).balanceOf(address(this)));
+            _updateReserves(IERC20(token0_).balanceOf(address(this)), IERC20(token1_).balanceOf(address(this)), 0, 0);
             return;
         }
 
@@ -106,8 +108,7 @@ contract Pair is ERC20, ReentrancyGuard {
         IERC20(token1_).safeTransferFrom(msg.sender, address(this), amount1ToUse);
         uint256 actualAmount1 = IERC20(token1_).balanceOf(address(this)) - initialBalance1;
 
-        _reserve0 += uint112(actualAmount0);
-        _reserve1 += uint112(actualAmount1);
+        _updateReserves(reserve0_ + actualAmount0, reserve1_ + actualAmount1, reserve0_, reserve1_);
         uint256 liquidity0 = (actualAmount0 * totalSupply_) / reserve0_;
         uint256 liquidity1 = (actualAmount1 * totalSupply_) / reserve1_;
         if (liquidity0 < liquidity1) {
@@ -137,6 +138,9 @@ contract Pair is ERC20, ReentrancyGuard {
             revert RemoveLiquidityDoesNotMeetMinimum1Out();
         }
         _burn(msg.sender, liquidity);
+        uint256 reserve0_ = _reserve0;
+        uint256 reserve1_ = _reserve1;
+        _updateReserves(reserve0_ - amount0, reserve1_ - amount1, reserve0_, reserve1_);
         IERC20(token0_).transfer(to, amount0);
         IERC20(token1_).transfer(to, amount1);
 
@@ -174,23 +178,17 @@ contract Pair is ERC20, ReentrancyGuard {
         IERC20(fromToken).safeTransferFrom(msg.sender, address(this), amountIn);
         uint256 finalBalanceFrom = IERC20(fromToken).balanceOf(address(this));
         uint256 actualAmountIn = finalBalanceFrom - initialBalanceFrom;
-        console.log("Actual tokens in: %e", actualAmountIn);
         uint256 actualAmountInSubFee = actualAmountIn * FEE_MULTIPLIER;
 
         uint256 amountOut =
-            (actualAmountInSubFee * toReserve) /
-            (fromReserve * DECIMAL_MULTIPLIER + actualAmountInSubFee);
+            (actualAmountInSubFee * toReserve) / (fromReserve * DECIMAL_MULTIPLIER + actualAmountInSubFee);
         require(amountOut >= amoutOutMin, "Amount out must meet the slippage threshold");
         IERC20(toToken).safeTransfer(to, amountOut);
-        console.log("Transfered %d tokens out", amountOut);
         uint256 finalBalanceTo = IERC20(toToken).balanceOf(address(this));
         uint256 actualAmountOut = initialBalanceTo - finalBalanceTo;
 
         if (side) {
-            console.log("Got here 1");
-            _reserve1 += uint112(actualAmountIn);
-            console.log("Got here 1");
-            _reserve0 -= uint112(actualAmountOut);
+            _updateReserves(toReserve - actualAmountOut, fromReserve + actualAmountIn, toReserve, fromReserve);
 
             // emit Swap(
             //     msg.sender,
@@ -201,12 +199,17 @@ contract Pair is ERC20, ReentrancyGuard {
             //     address indexed to
             // );
         } else {
-            console.log("Got here 1a");
-            _reserve0 += uint112(actualAmountIn);
-            console.log("Got here 2a");
-            _reserve1 -= uint112(actualAmountOut);
+            _updateReserves(fromReserve + actualAmountIn, toReserve - actualAmountOut, fromReserve, toReserve);
         }
     }
 
-    //function _updateReserves(uint256 newReserve0, uint256 )
+    function _updateReserves(uint256 newReserve0, uint256 newReserve1, uint256 currentReserve0, uint256 currentReserve1)
+        private
+    {
+        if (newReserve0 > MAX_UINT_112 || newReserve1 > MAX_UINT_112) {
+            revert OverflowReserves();
+        }
+        _reserve0 = uint112(newReserve0);
+        _reserve1 = uint112(newReserve1);
+    }
 }
