@@ -91,7 +91,17 @@ contract PairTest is Test {
             token1.balanceOf(address(this)),
             initialToken1Balance + 4 ether,
             "Must have expected increase in LP's token 1 balance"
-        );
+        );    
+    }
+
+    function test_removeLiquidityUnderMinimumAmounts() public {
+        pair.addLiquidity(5 ether, 20 ether, 0, 0, address(this));
+
+        vm.expectRevert(Pair.RemoveLiquidityDoesNotMeetMinimum0Out.selector);
+        pair.removeLiquidity(2 ether, 1 ether + 1, 0, address(this));
+
+        vm.expectRevert(Pair.RemoveLiquidityDoesNotMeetMinimum1Out.selector);
+        pair.removeLiquidity(2 ether, 0, 4 ether + 1, address(this));
     }
 
     function test_swap() public {
