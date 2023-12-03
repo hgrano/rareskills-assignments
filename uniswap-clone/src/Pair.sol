@@ -75,6 +75,7 @@ contract Pair is ERC20, ReentrancyGuard {
         if (totalSupply_ == 0) {
             _mint(to, FixedPointMathLib.sqrt(amount0Approved * amount1Approved) - MIN_LIQUIDITY);
             _mint(address(0), MIN_LIQUIDITY);
+            emit Mint(msg.sender, amount0Approved, amount1Approved);
             IERC20(token0_).safeTransferFrom(msg.sender, address(this), amount0Approved);
             IERC20(token1_).safeTransferFrom(msg.sender, address(this), amount1Approved);
             _updateReserves(IERC20(token0_).balanceOf(address(this)), IERC20(token1_).balanceOf(address(this)), 0, 0);
@@ -116,6 +117,8 @@ contract Pair is ERC20, ReentrancyGuard {
         } else {
             _mint(to, liquidity1);
         }
+
+        emit Mint(msg.sender, actualAmount0, actualAmount1);
     }
 
     function removeLiquidity(uint256 liquidity, uint256 amount0Min, uint256 amount1Min, address to)
@@ -192,16 +195,11 @@ contract Pair is ERC20, ReentrancyGuard {
         if (side) {
             _updateReserves(toReserve - actualAmountOut, fromReserve + actualAmountIn, toReserve, fromReserve);
 
-            // emit Swap(
-            //     msg.sender,
-            //     uint amount0In,
-            //     uint amount1In,
-            //     uint amount0Out,
-            //     uint amount1Out,
-            //     address indexed to
-            // );
+            emit Swap(msg.sender, 0, actualAmountIn, amountOut, 0, to);
         } else {
             _updateReserves(fromReserve + actualAmountIn, toReserve - actualAmountOut, fromReserve, toReserve);
+
+            emit Swap(msg.sender, actualAmountIn, 0, 0, amountOut, to);
         }
     }
 

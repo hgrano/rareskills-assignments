@@ -91,7 +91,7 @@ contract PairTest is Test {
             token1.balanceOf(address(this)),
             initialToken1Balance + 4 ether,
             "Must have expected increase in LP's token 1 balance"
-        );    
+        );
     }
 
     function test_removeLiquidityUnderMinimumAmounts() public {
