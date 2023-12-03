@@ -28,6 +28,52 @@ contract PairTest is Test {
         assertEq(token1.balanceOf(address(pair)), token1In, "Must transfer token1 tokens to the pair");
     }
 
+    function test_addLiquidityUnderMinimumAmounts() public {
+        pair.addLiquidity(5 ether, 20 ether, 0, 0, address(this));
+
+        vm.expectRevert(Pair.AddLiquidityDoesNotMeetMinimumAmount0.selector);
+        pair.addLiquidity(1 ether, 4 ether - 1, 1 ether, 0, address(this));
+
+        vm.expectRevert(Pair.AddLiquidityDoesNotMeetMinimumAmount1.selector);
+        pair.addLiquidity(1 ether - 1, 4 ether, 0, 4 ether - 3, address(this));
+    }
+
+    function test_addLiquidityOverMinimumAmount0() public {
+        pair.addLiquidity(5 ether, 20 ether, 0, 0, address(this));
+
+        uint256 initialToken0Balance = token0.balanceOf(address(this));
+        uint256 initialToken1Balance = token1.balanceOf(address(this));
+        pair.addLiquidity(1 ether, 4 ether - 1, 1 ether - 1, 0, address(this));
+        assertEq(
+            token0.balanceOf(address(this)),
+            initialToken0Balance - (1 ether - 1),
+            "Must have expected decrease in LP's token0 balance"
+        );
+        assertEq(
+            token1.balanceOf(address(this)),
+            initialToken1Balance - (4 ether - 1),
+            "Must have expected decrease in LP's token1 balance"
+        );
+    }
+
+    function test_addLiquidityOverMinimumAmount1() public {
+        pair.addLiquidity(5 ether, 20 ether, 0, 0, address(this));
+
+        uint256 initialToken0Balance = token0.balanceOf(address(this));
+        uint256 initialToken1Balance = token1.balanceOf(address(this));
+        pair.addLiquidity(1 ether - 1, 4 ether, 0, 4 ether - 4, address(this));
+        assertEq(
+            token0.balanceOf(address(this)),
+            initialToken0Balance - (1 ether - 1),
+            "Must have expected decrease in LP's token0 balance"
+        );
+        assertEq(
+            token1.balanceOf(address(this)),
+            initialToken1Balance - (4 ether - 4),
+            "Must have expected decrease in LP's token1 balance"
+        );
+    }
+
     function test_removeLiquidity() public {
         uint256 token0In = 5 ether;
         uint256 token1In = 20 ether;
