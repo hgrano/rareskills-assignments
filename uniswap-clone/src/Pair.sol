@@ -147,15 +147,15 @@ contract Pair is ERC20, ReentrancyGuard {
         emit Burn(msg.sender, amount0, amount1, to);
     }
 
-    function swapExactToken0ForToken1(uint256 amountIn, uint256 amoutOutMin, address to) external nonReentrant {
-        _swapExactTokenForToken(false, amountIn, amoutOutMin, to);
+    function swapExactToken0ForToken1(uint256 amountIn, uint256 amountOutMin, address to) external nonReentrant {
+        _swapExactTokenForToken(false, amountIn, amountOutMin, to);
     }
 
-    function swapExactToken1ForToken0(uint256 amountIn, uint256 amoutOutMin, address to) external nonReentrant {
-        _swapExactTokenForToken(true, amountIn, amoutOutMin, to);
+    function swapExactToken1ForToken0(uint256 amountIn, uint256 amountOutMin, address to) external nonReentrant {
+        _swapExactTokenForToken(true, amountIn, amountOutMin, to);
     }
 
-    function _swapExactTokenForToken(bool side, uint256 amountIn, uint256 amoutOutMin, address to) private {
+    function _swapExactTokenForToken(bool side, uint256 amountIn, uint256 amountOutMin, address to) private {
         address fromToken;
         uint112 fromReserve;
         address toToken;
@@ -182,7 +182,9 @@ contract Pair is ERC20, ReentrancyGuard {
 
         uint256 amountOut =
             (actualAmountInSubFee * toReserve) / (fromReserve * DECIMAL_MULTIPLIER + actualAmountInSubFee);
-        require(amountOut >= amoutOutMin, "Amount out must meet the slippage threshold");
+        if (amountOut < amountOutMin) {
+            revert SwapDoesNotMeetMinimumOut();
+        }
         IERC20(toToken).safeTransfer(to, amountOut);
         uint256 finalBalanceTo = IERC20(toToken).balanceOf(address(this));
         uint256 actualAmountOut = initialBalanceTo - finalBalanceTo;

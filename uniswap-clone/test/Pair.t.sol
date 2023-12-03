@@ -109,15 +109,39 @@ contract PairTest is Test {
         uint256 initialToken0Balance = token0.balanceOf(address(this));
         uint256 initialToken1Balance = token1.balanceOf(address(this));
         pair.swapExactToken0ForToken1(1 ether, 0, address(this));
+        uint256 expectedToken0BalanceAfterFirstSwap = initialToken0Balance - 1 ether;
+        uint256 expectedToken1BalanceAfterFirstSwap = initialToken1Balance + 3910033923564131223;
         assertEq(
             token0.balanceOf(address(this)),
-            initialToken0Balance - 1 ether,
-            "Must have expected reduction in token 0 balance"
+            expectedToken0BalanceAfterFirstSwap,
+            "Must have expected reduction in token 0 balance after first swap"
         );
         assertEq(
             token1.balanceOf(address(this)),
-            initialToken1Balance + 3910033923564131223,
-            "Must have expected increase in token 1 balance"
+            expectedToken1BalanceAfterFirstSwap,
+            "Must have expected increase in token 1 balance after first swap"
         );
+
+        pair.swapExactToken1ForToken0(1 ether, 0, address(this));
+        assertEq(
+            token0.balanceOf(address(this)),
+            expectedToken0BalanceAfterFirstSwap + 257992707545561908,
+            "Must have expected increase in token 0 balance after second swap"
+        );
+        assertEq(
+            token1.balanceOf(address(this)),
+            expectedToken1BalanceAfterFirstSwap - 1 ether,
+            "Must have expected decrease in token 1 balance after second swap"
+        );
+    }
+
+    function test_swapUnderMinimumAmounts() public {
+        pair.addLiquidity(50 ether, 200 ether, 0, 0, address(this));
+
+        vm.expectRevert(Pair.SwapDoesNotMeetMinimumOut.selector);
+        pair.swapExactToken0ForToken1(1 ether, 3910033923564131224, address(this));
+
+        vm.expectRevert(Pair.SwapDoesNotMeetMinimumOut.selector);
+        pair.swapExactToken1ForToken0(20 ether, 4533054469400745658, address(this));
     }
 }
