@@ -32,14 +32,18 @@ contract Pair is ERC20, ReentrancyGuard {
 
     uint256 public constant MIN_LIQUIDITY = 1000;
 
-    string private _name;
-    string private _symbol;
-
     address public _token0;
     address public _token1;
 
+    uint256 public price0CumulativeLast;
+    uint256 public price1CumulativeLast;
+
+    string private _name;
+    string private _symbol;
+
     uint112 private _reserve0;
     uint112 private _reserve1;
+    uint32 private blockTimestampLast;
 
     uint256 private constant DECIMAL_MULTIPLIER = 1000;
     uint256 private constant FEE_MULTIPLIER = 997;
@@ -82,8 +86,8 @@ contract Pair is ERC20, ReentrancyGuard {
             return;
         }
 
-        uint256 reserve0_ = _reserve0;
-        uint256 reserve1_ = _reserve1;
+        uint112 reserve0_ = _reserve0;
+        uint112 reserve1_ = _reserve1;
         uint256 amount1ImpliedByApproval = (reserve1_ * amount0Approved) / reserve0_;
         uint256 amount0ToUse;
         uint256 amount1ToUse;
@@ -141,8 +145,8 @@ contract Pair is ERC20, ReentrancyGuard {
             revert RemoveLiquidityDoesNotMeetMinimum1Out();
         }
         _burn(msg.sender, liquidity);
-        uint256 reserve0_ = _reserve0;
-        uint256 reserve1_ = _reserve1;
+        uint112 reserve0_ = _reserve0;
+        uint112 reserve1_ = _reserve1;
         _updateReserves(reserve0_ - amount0, reserve1_ - amount1, reserve0_, reserve1_);
         IERC20(token0_).transfer(to, amount0);
         IERC20(token1_).transfer(to, amount1);
@@ -203,13 +207,29 @@ contract Pair is ERC20, ReentrancyGuard {
         }
     }
 
-    function _updateReserves(uint256 newReserve0, uint256 newReserve1, uint256 currentReserve0, uint256 currentReserve1)
+    function _updateReserves(uint256 newReserve0, uint256 newReserve1, uint112 currentReserve0, uint112 currentReserve1)
         private
     {
         if (newReserve0 > MAX_UINT_112 || newReserve1 > MAX_UINT_112) {
             revert OverflowReserves();
         }
+        uint32 currentBlockTimestamp = uint32(block.timestamp % 2 ** 32);
+        unchecked {
+            uint32 timeSinceLastUpdate = currentBlockTimestamp - blockTimestampLast;
+
+            if (timeSinceLastUpdate > 0 && currentReserve0 != 0 && currentReserve1 != 0) {
+                price0CumulativeLast +=
+                    uint256(_asFixedPoint112(currentReserve1) / uint224(currentReserve0)) * timeSinceLastUpdate;
+                price1CumulativeLast +=
+                    uint256(_asFixedPoint112(currentReserve0) / uint224(currentReserve1)) * timeSinceLastUpdate;
+            }
+        }
+        blockTimestampLast = currentBlockTimestamp;
         _reserve0 = uint112(newReserve0);
         _reserve1 = uint112(newReserve1);
+    }
+
+    function _asFixedPoint112(uint112 x) private pure returns (uint224) {
+        return uint224(x) << 112;
     }
 }
