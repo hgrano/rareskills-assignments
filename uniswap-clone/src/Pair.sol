@@ -32,6 +32,9 @@ contract Pair is ERC20, ReentrancyGuard {
 
     uint256 public constant MIN_LIQUIDITY = 1000;
 
+    string public constant NAME = "Uniswap Pair Token";
+    string public constant SYMBOL = "UNI";
+
     address public token0;
     address public token1;
 
@@ -51,16 +54,14 @@ contract Pair is ERC20, ReentrancyGuard {
     uint256 private constant MAX_UINT_112 = 2 ** 112 - 1;
 
     function name() public view override returns (string memory) {
-        return _name;
+        return NAME;
     }
 
     function symbol() public view override returns (string memory) {
-        return _symbol;
+        return SYMBOL;
     }
 
-    constructor(string memory name_, string memory symbol_, address token0_, address token1_) {
-        _name = name_;
-        _symbol = symbol_;
+    constructor(address token0_, address token1_) {
         token0 = token0_;
         token1 = token1_;
     }

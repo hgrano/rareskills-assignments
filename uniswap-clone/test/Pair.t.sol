@@ -13,7 +13,7 @@ contract PairTest is Test {
     function setUp() public {
         token0 = new TestERC20(10_000 ether, address(this));
         token1 = new TestERC20(10_000 ether, address(this));
-        pair = new Pair("", "", address(token0), address(token1));
+        pair = new Pair(address(token0), address(token1));
         token0.approve(address(pair), 10_000 ether);
         token1.approve(address(pair), 10_000 ether);
     }
