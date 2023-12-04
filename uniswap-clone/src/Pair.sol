@@ -32,8 +32,8 @@ contract Pair is ERC20, ReentrancyGuard {
 
     uint256 public constant MIN_LIQUIDITY = 1000;
 
-    address public _token0;
-    address public _token1;
+    address public token0;
+    address public token1;
 
     uint256 public price0CumulativeLast;
     uint256 public price1CumulativeLast;
@@ -61,8 +61,8 @@ contract Pair is ERC20, ReentrancyGuard {
     constructor(string memory name_, string memory symbol_, address token0_, address token1_) {
         _name = name_;
         _symbol = symbol_;
-        _token0 = token0_;
-        _token1 = token1_;
+        token0 = token0_;
+        token1 = token1_;
     }
 
     function addLiquidity(
@@ -73,8 +73,8 @@ contract Pair is ERC20, ReentrancyGuard {
         address to
     ) external nonReentrant {
         uint256 totalSupply_ = totalSupply();
-        address token0_ = _token0;
-        address token1_ = _token1;
+        address token0_ = token0;
+        address token1_ = token1;
 
         if (totalSupply_ == 0) {
             _mint(to, FixedPointMathLib.sqrt(amount0Approved * amount1Approved) - MIN_LIQUIDITY);
@@ -134,12 +134,12 @@ contract Pair is ERC20, ReentrancyGuard {
             revert InsufficientBalanceToRemoveLiquidity();
         }
         uint256 totalSupply_ = totalSupply();
-        address token0_ = _token0;
+        address token0_ = token0;
         uint256 amount0 = (liquidity * IERC20(token0_).balanceOf(address(this))) / totalSupply_;
         if (amount0 < amount0Min) {
             revert RemoveLiquidityDoesNotMeetMinimum0Out();
         }
-        address token1_ = _token1;
+        address token1_ = token1;
         uint256 amount1 = (liquidity * IERC20(token1_).balanceOf(address(this))) / totalSupply_;
         if (amount1 < amount1Min) {
             revert RemoveLiquidityDoesNotMeetMinimum1Out();
@@ -163,45 +163,45 @@ contract Pair is ERC20, ReentrancyGuard {
     }
 
     function _swapExactTokenForToken(bool side, uint256 amountIn, uint256 amountOutMin, address to) private {
-        address fromToken;
-        uint112 fromReserve;
-        address toToken;
-        uint112 toReserve;
+        address inToken;
+        uint112 inReserve;
+        address outToken;
+        uint112 outReserve;
 
         if (side) {
-            fromToken = _token1;
-            fromReserve = _reserve1;
-            toToken = _token0;
-            toReserve = _reserve0;
+            inToken = token1;
+            inReserve = _reserve1;
+            outToken = token0;
+            outReserve = _reserve0;
         } else {
-            fromToken = _token0;
-            fromReserve = _reserve0;
-            toToken = _token1;
-            toReserve = _reserve1;
+            inToken = token0;
+            inReserve = _reserve0;
+            outToken = token1;
+            outReserve = _reserve1;
         }
 
-        uint256 initialBalanceFrom = IERC20(fromToken).balanceOf(address(this));
-        uint256 initialBalanceTo = IERC20(toToken).balanceOf(address(this));
-        IERC20(fromToken).safeTransferFrom(msg.sender, address(this), amountIn);
-        uint256 finalBalanceFrom = IERC20(fromToken).balanceOf(address(this));
-        uint256 actualAmountIn = finalBalanceFrom - initialBalanceFrom;
+        uint256 initialBalanceIn = IERC20(inToken).balanceOf(address(this));
+        uint256 initialBalanceOut = IERC20(outToken).balanceOf(address(this));
+        IERC20(inToken).safeTransferFrom(msg.sender, address(this), amountIn);
+        uint256 finalBalanceIn = IERC20(inToken).balanceOf(address(this));
+        uint256 actualAmountIn = finalBalanceIn - initialBalanceIn;
         uint256 actualAmountInSubFee = actualAmountIn * FEE_MULTIPLIER;
 
         uint256 amountOut =
-            (actualAmountInSubFee * toReserve) / (fromReserve * DECIMAL_MULTIPLIER + actualAmountInSubFee);
+            (actualAmountInSubFee * outReserve) / (inReserve * DECIMAL_MULTIPLIER + actualAmountInSubFee);
         if (amountOut < amountOutMin) {
             revert SwapDoesNotMeetMinimumOut();
         }
-        IERC20(toToken).safeTransfer(to, amountOut);
-        uint256 finalBalanceTo = IERC20(toToken).balanceOf(address(this));
-        uint256 actualAmountOut = initialBalanceTo - finalBalanceTo;
+        IERC20(outToken).safeTransfer(to, amountOut);
+        uint256 finalBalanceOut = IERC20(outToken).balanceOf(address(this));
+        uint256 actualAmountOut = initialBalanceOut - finalBalanceOut;
 
         if (side) {
-            _updateReserves(toReserve - actualAmountOut, fromReserve + actualAmountIn, toReserve, fromReserve);
+            _updateReserves(outReserve - actualAmountOut, inReserve + actualAmountIn, outReserve, inReserve);
 
             emit Swap(msg.sender, 0, actualAmountIn, amountOut, 0, to);
         } else {
-            _updateReserves(fromReserve + actualAmountIn, toReserve - actualAmountOut, fromReserve, toReserve);
+            _updateReserves(inReserve + actualAmountIn, outReserve - actualAmountOut, inReserve, outReserve);
 
             emit Swap(msg.sender, actualAmountIn, 0, 0, amountOut, to);
         }
