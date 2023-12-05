@@ -5,6 +5,7 @@ import {ERC20} from "solady/tokens/ERC20.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC3156FlashBorrower} from "@openzeppelin/contracts/interfaces/IERC3156FlashBorrower.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "forge-std/console.sol";
 
@@ -18,6 +19,9 @@ contract Pair is ERC20, ReentrancyGuard {
     error AddLiquidityDoesNotMeetMinimumAmount0();
     error AddLiquidityDoesNotMeetMinimumAmount1();
     error OverflowReserves();
+    error FlashSwapReceiverFailure();
+    error FlashSwapNotPaidBack();
+    error FlashSwapExceedsMaxRepayment();
 
     event Mint(address indexed sender, uint256 amount0, uint256 amount1);
     event Burn(address indexed sender, uint256 amount0, uint256 amount1, address indexed to);
@@ -52,6 +56,8 @@ contract Pair is ERC20, ReentrancyGuard {
     uint256 private constant FEE_MULTIPLIER = 997;
 
     uint256 private constant MAX_UINT_112 = 2 ** 112 - 1;
+
+    bytes32 private constant _FLASHSWAP_CALLBACK_SUCCESS = keccak256("ERC3156FlashBorrower.onFlashLoan");
 
     function name() public view override returns (string memory) {
         return NAME;
@@ -161,6 +167,50 @@ contract Pair is ERC20, ReentrancyGuard {
 
     function swapExactToken1ForToken0(uint256 amountIn, uint256 amountOutMin, address to) external nonReentrant {
         _swapExactTokenForToken(true, amountIn, amountOutMin, to);
+    }
+
+    function flashSwap(bool side, uint256 amount, uint256 maxRepayment, address to) external nonReentrant {
+        address tokenIn;
+        address tokenOut;
+        uint112 reserveIn;
+        uint112 reserveOut;
+        if (side) {
+            tokenIn = token1;
+            tokenOut = token0;
+            reserveIn = _reserve1;
+            reserveOut = _reserve0;
+        } else {
+            tokenIn = token0;
+            tokenOut = token1;
+            reserveIn = _reserve0;
+            reserveOut = _reserve1;
+        }
+
+        uint256 initialToBalanceOut = IERC20(tokenOut).balanceOf(to);
+        IERC20(tokenOut).safeTransfer(to, amount);
+        uint256 actualAmount;
+        unchecked {
+            actualAmount = initialToBalanceOut - IERC20(tokenOut).balanceOf(to);
+        }
+        uint256 initialBalanceIn = IERC20(tokenIn).balanceOf(address(this));
+        uint256 owedIn = (DECIMAL_MULTIPLIER * amount * reserveIn) / (FEE_MULTIPLIER * (reserveOut -  amount));
+        if (owedIn > maxRepayment) {
+            revert FlashSwapExceedsMaxRepayment();
+        }
+        bytes32 callbackResult = IERC3156FlashBorrower(to).onFlashLoan(msg.sender, tokenOut, actualAmount, 0, abi.encode(tokenIn, owedIn));
+        if (callbackResult != _FLASHSWAP_CALLBACK_SUCCESS) {
+            revert FlashSwapReceiverFailure();
+        }
+        uint256 finalBalanceIn = IERC20(tokenIn).balanceOf(address(this));
+        if (finalBalanceIn - initialBalanceIn < owedIn) {
+            revert FlashSwapNotPaidBack();
+        }
+
+        if (side) {
+            _updateReserves(IERC20(tokenOut).balanceOf(address(this)), finalBalanceIn, reserveOut, reserveIn);
+        } else {
+            _updateReserves(finalBalanceIn, IERC20(tokenOut).balanceOf(address(this)), reserveIn, reserveOut);
+        }
     }
 
     function _swapExactTokenForToken(bool side, uint256 amountIn, uint256 amountOutMin, address to) private {
