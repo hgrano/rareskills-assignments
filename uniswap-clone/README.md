@@ -22,13 +22,14 @@ means they wrap back around to zero i.e. the values are just modulo (2^256 - 1).
 = d
 ```
 
-Therefore due to the rules of modular arithmetic the fact the these values overflow does not matter.
+Therefore due to the rules of modular arithmetic the fact that these values overflow does not matter.
 
 > How do you write a contract that uses the oracle?
 
 As described above, you need to snap shot the values and record the block timestamp at the time. Then at times after
 this, we subract the current cumulative values from the Pair from the snapshotted values and divide by the time elapsed.
-This gives the time-weighted average.
+This gives the time-weighted average. We should regularly refresh the snapshot to provide a more accurate TWAP
+reflective of more recent prices.
 
 > Why are price0CumulativeLast and price1CumulativeLast stored separately? Why not just calculate `price1CumulativeLast = 1/price0CumulativeLast?
 
