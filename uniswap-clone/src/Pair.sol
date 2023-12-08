@@ -123,13 +123,26 @@ contract Pair is ERC20, ReentrancyGuard {
 
         uint256 initialBalance0 = IERC20(token0_).balanceOf(address(this));
         IERC20(token0_).safeTransferFrom(msg.sender, address(this), amount0ToUse);
-        uint256 actualAmount0 = IERC20(token0_).balanceOf(address(this)) - initialBalance0;
+        uint256 actualAmount0;
+        unchecked {
+            // Unchecked is safe as the Pair's balance can only increase
+            actualAmount0 = IERC20(token0_).balanceOf(address(this)) - initialBalance0;
+        }
 
         uint256 initialBalance1 = IERC20(token1_).balanceOf(address(this));
         IERC20(token1_).safeTransferFrom(msg.sender, address(this), amount1ToUse);
-        uint256 actualAmount1 = IERC20(token1_).balanceOf(address(this)) - initialBalance1;
 
-        _updateReserves(reserve0_ + actualAmount0, reserve1_ + actualAmount1, reserve0_, reserve1_);
+        uint256 actualAmount1;
+        unchecked {
+            // Unchecked is safe as the Pair's balance can only increase
+            actualAmount1 = IERC20(token1_).balanceOf(address(this)) - initialBalance1;
+        }
+
+        unchecked {
+            // Unchecked as the balance of this contract could not overflow, as otherwise the total supply of token0
+            // or token1 would have to overlfow
+            _updateReserves(reserve0_ + actualAmount0, reserve1_ + actualAmount1, reserve0_, reserve1_);
+        }
         uint256 liquidity0 = (actualAmount0 * totalSupply_) / reserve0_;
         uint256 liquidity1 = (actualAmount1 * totalSupply_) / reserve1_;
         if (liquidity0 < liquidity1) {
@@ -168,11 +181,16 @@ contract Pair is ERC20, ReentrancyGuard {
             revert RemoveLiquidityDoesNotMeetMinimum1Out();
         }
         _burn(msg.sender, liquidity);
-        uint112 reserve0_ = _reserve0;
-        uint112 reserve1_ = _reserve1;
-        _updateReserves(reserve0_ - amount0, reserve1_ - amount1, reserve0_, reserve1_);
         IERC20(token0_).transfer(to, amount0);
         IERC20(token1_).transfer(to, amount1);
+
+        uint112 reserve0_ = _reserve0;
+        uint112 reserve1_ = _reserve1;
+
+        unchecked {
+            // Unchecked is safe as the user can't withdraw more than our reserves
+            _updateReserves(reserve0_ - amount0, reserve1_ - amount1, reserve0_, reserve1_);
+        }
 
         emit Burn(msg.sender, amount0, amount1, to);
     }
@@ -236,7 +254,7 @@ contract Pair is ERC20, ReentrancyGuard {
             _updateReserves(finalBalanceIn, IERC20(tokenOut).balanceOf(address(this)), reserveIn, reserveOut);
         }
 
-        // Prevent stack too deep errors by coping variables to memory
+        // Prevent stack too deep errors by copying variables to memory
         uint256 amount_ = amount;
         emit Swap(msg.sender, side, owedIn, amount_, to);
     }
@@ -273,7 +291,10 @@ contract Pair is ERC20, ReentrancyGuard {
         uint256 initialBalanceOut = IERC20(outToken).balanceOf(address(this));
         IERC20(inToken).safeTransferFrom(msg.sender, address(this), amountIn);
         uint256 finalBalanceIn = IERC20(inToken).balanceOf(address(this));
-        uint256 actualAmountIn = finalBalanceIn - initialBalanceIn;
+        uint256 actualAmountIn;
+        unchecked {
+            actualAmountIn = finalBalanceIn - initialBalanceIn;
+        }
         uint256 actualAmountInSubFee = actualAmountIn * FEE_MULTIPLIER;
 
         uint256 amountOut =
@@ -284,13 +305,15 @@ contract Pair is ERC20, ReentrancyGuard {
         IERC20(outToken).safeTransfer(to, amountOut);
         uint256 finalBalanceOut = IERC20(outToken).balanceOf(address(this));
 
-        if (side) {
-            _updateReserves(outReserve - amountOut, inReserve + actualAmountIn, outReserve, inReserve);
-        } else {
-            _updateReserves(inReserve + actualAmountIn, outReserve - amountOut, inReserve, outReserve);
+        unchecked {
+            if (side) {
+                _updateReserves(outReserve - amountOut, inReserve + actualAmountIn, outReserve, inReserve);
+            } else {
+                _updateReserves(inReserve + actualAmountIn, outReserve - amountOut, inReserve, outReserve);
+            }
         }
 
-        // Prevent stack too deep errors by coping variables to memory
+        // Prevent stack too deep errors by copying variables to memory
         bool side_ = side;
         uint256 amountIn_ = amountIn;
         emit Swap(msg.sender, side_, amountIn_, amountOut, to);
