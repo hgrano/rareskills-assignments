@@ -28,9 +28,7 @@ contract Factory {
         if (_pairs[token0][token1] != address(0)) {
             revert PairAlreadyExists();
         }
-        address pair = address(
-            new Pair{salt: keccak256(abi.encodePacked(token0, token1))}(token0, token1)
-        );
+        address pair = address(new Pair{salt: keccak256(abi.encodePacked(token0, token1))}(token0, token1));
         _pairs[token0][token1] = pair;
         return pair;
     }

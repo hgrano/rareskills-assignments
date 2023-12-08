@@ -23,17 +23,15 @@ contract Pair is ERC20, ReentrancyGuard {
     error FlashSwapNotPaidBack();
     error FlashSwapExceedsMaxRepayment();
 
-    event Mint(address indexed sender, uint256 amount0, uint256 amount1);
+    event Mint(address indexed sender, uint256 amount0, uint256 amount1, uint256 shares);
     event Burn(address indexed sender, uint256 amount0, uint256 amount1, address indexed to);
     event Swap(
         address indexed sender,
-        uint256 amount0In,
-        uint256 amount1In,
-        uint256 amount0Out,
-        uint256 amount1Out,
+        bool indexed side,
+        uint256 amountIn,
+        uint256 amountOut,
         address indexed to
     );
-
     uint256 public constant MIN_LIQUIDITY = 1000;
 
     string public constant NAME = "Uniswap Pair Token";
@@ -72,6 +70,13 @@ contract Pair is ERC20, ReentrancyGuard {
         token1 = token1_;
     }
 
+    /// @notice Add liquidity to the pool by transferring tokens in
+    /// @dev emits a Mint event
+    /// @param amount0Approved Max amount of token0 the sender is willing to transfer out of their account
+    /// @param amount1Approved Max amount of token1 the sender is willing to transfer out of their account
+    /// @param amount0Min Min amount of token0 the sender is willing to transfer out of their account
+    /// @param amount1Min Min amount of token01the sender is willing to transfer out of their account
+    /// @param to Address to mint liquidity tokens to
     function addLiquidity(
         uint256 amount0Approved,
         uint256 amount1Approved,
@@ -84,11 +89,15 @@ contract Pair is ERC20, ReentrancyGuard {
         address token1_ = token1;
 
         if (totalSupply_ == 0) {
-            _mint(to, FixedPointMathLib.sqrt(amount0Approved * amount1Approved) - MIN_LIQUIDITY);
-            _mint(address(0), MIN_LIQUIDITY);
-            emit Mint(msg.sender, amount0Approved, amount1Approved);
             IERC20(token0_).safeTransferFrom(msg.sender, address(this), amount0Approved);
             IERC20(token1_).safeTransferFrom(msg.sender, address(this), amount1Approved);
+
+            uint256 shares = FixedPointMathLib.sqrt(amount0Approved * amount1Approved) - MIN_LIQUIDITY;
+            _mint(to, shares);
+            emit Mint(msg.sender, amount0Approved, amount1Approved, shares);
+            _mint(address(0), MIN_LIQUIDITY);
+            emit Mint(address(0), amount0Approved, amount1Approved, MIN_LIQUIDITY);
+
             _updateReserves(IERC20(token0_).balanceOf(address(this)), IERC20(token1_).balanceOf(address(this)), 0, 0);
             return;
         }
@@ -125,13 +134,20 @@ contract Pair is ERC20, ReentrancyGuard {
         uint256 liquidity1 = (actualAmount1 * totalSupply_) / reserve1_;
         if (liquidity0 < liquidity1) {
             _mint(to, liquidity0);
+            emit Mint(msg.sender, actualAmount0, actualAmount1, liquidity0);
         } else {
             _mint(to, liquidity1);
+            emit Mint(msg.sender, actualAmount0, actualAmount1, liquidity1);
         }
-
-        emit Mint(msg.sender, actualAmount0, actualAmount1);
     }
 
+    /// @notice Remove liquidity from the Pair
+    /// @dev emits a Burn event
+    /// @dev reverts if the sender does not have sufficient balance
+    /// @param liquidity Number of liquidity tokens to withdraw
+    /// @param amount0Min Minimum amount of token0 the user is willing to receive
+    /// @param amount1Min Minimum amount of token1 the user is willing to receive
+    /// @param to Address to receive token0 and token1
     function removeLiquidity(uint256 liquidity, uint256 amount0Min, uint256 amount1Min, address to)
         external
         nonReentrant
@@ -161,14 +177,15 @@ contract Pair is ERC20, ReentrancyGuard {
         emit Burn(msg.sender, amount0, amount1, to);
     }
 
-    function swapExactToken0ForToken1(uint256 amountIn, uint256 amountOutMin, address to) external nonReentrant {
-        _swapExactTokenForToken(false, amountIn, amountOutMin, to);
-    }
-
-    function swapExactToken1ForToken0(uint256 amountIn, uint256 amountOutMin, address to) external nonReentrant {
-        _swapExactTokenForToken(true, amountIn, amountOutMin, to);
-    }
-
+    /// @notice Flash swap one token for the other token: `to` receives the requested amount of tokens first, after
+    /// which their callback function will be invoked which must repay the required quantity of the other token.
+    /// @dev `to` must implement `IERC3156FlashBorrower`
+    /// @dev emits a Swap event
+    /// @dev reverts if `to` does not pay back at least the required value of tokens
+    /// @param side If true, then the swap is from token1 to token0, otherwise the swap is from token0 to token1
+    /// @param amount Amount of tokens to transfer out of the Pair
+    /// @param maxRepayment Maximum number of tokens the caller is willing to use to payback the Pair
+    /// @param to Address to receive the tokens
     function flashSwap(bool side, uint256 amount, uint256 maxRepayment, address to) external nonReentrant {
         address tokenIn;
         address tokenOut;
@@ -188,22 +205,29 @@ contract Pair is ERC20, ReentrancyGuard {
 
         uint256 initialToBalanceOut = IERC20(tokenOut).balanceOf(to);
         IERC20(tokenOut).safeTransfer(to, amount);
-        uint256 actualAmount;
-        unchecked {
-            actualAmount = initialToBalanceOut - IERC20(tokenOut).balanceOf(to);
-        }
+        uint256 actualAmount = initialToBalanceOut - IERC20(tokenOut).balanceOf(to);
         uint256 initialBalanceIn = IERC20(tokenIn).balanceOf(address(this));
-        uint256 owedIn = (DECIMAL_MULTIPLIER * amount * reserveIn) / (FEE_MULTIPLIER * (reserveOut -  amount));
+        uint256 owedIn = (DECIMAL_MULTIPLIER * amount * reserveIn) / (FEE_MULTIPLIER * (reserveOut - amount));
         if (owedIn > maxRepayment) {
             revert FlashSwapExceedsMaxRepayment();
         }
-        bytes32 callbackResult = IERC3156FlashBorrower(to).onFlashLoan(msg.sender, tokenOut, actualAmount, 0, abi.encode(tokenIn, owedIn));
+        bytes32 callbackResult =
+            IERC3156FlashBorrower(to).onFlashLoan(
+                msg.sender,
+                tokenOut,
+                actualAmount,
+                0,
+                abi.encodePacked(tokenIn, owedIn) // Tell the flash borrower what token they owe back and how much
+            );
         if (callbackResult != _FLASHSWAP_CALLBACK_SUCCESS) {
             revert FlashSwapReceiverFailure();
         }
         uint256 finalBalanceIn = IERC20(tokenIn).balanceOf(address(this));
-        if (finalBalanceIn - initialBalanceIn < owedIn) {
-            revert FlashSwapNotPaidBack();
+        unchecked {
+            // Unchecked as it is not possible for the Pair's balance to decrease
+            if (finalBalanceIn - initialBalanceIn < owedIn) {
+                revert FlashSwapNotPaidBack();
+            }
         }
 
         if (side) {
@@ -211,9 +235,23 @@ contract Pair is ERC20, ReentrancyGuard {
         } else {
             _updateReserves(finalBalanceIn, IERC20(tokenOut).balanceOf(address(this)), reserveIn, reserveOut);
         }
+
+        // Prevent stack too deep errors by coping variables to memory
+        uint256 amount_ = amount;
+        emit Swap(msg.sender, side, owedIn, amount_, to);
     }
 
-    function _swapExactTokenForToken(bool side, uint256 amountIn, uint256 amountOutMin, address to) private {
+    /// @notice Swap one token for the other token
+    /// @dev emits a Swap event
+    /// @dev reverts if sender has not already approved at least `amountIn`
+    /// @param side If true, then the swap is from token1 to token0, otherwise the swap is from token0 to token1
+    /// @param amountIn Amount of tokens to transfer out of the sender's account
+    /// @param amountOutMin Minimum number of tokens the user is willing to receive in return
+    /// @param to Address to receive the tokens
+    function swapExactTokenForToken(bool side, uint256 amountIn, uint256 amountOutMin, address to)
+        external
+        nonReentrant
+    {
         address inToken;
         uint112 inReserve;
         address outToken;
@@ -245,17 +283,17 @@ contract Pair is ERC20, ReentrancyGuard {
         }
         IERC20(outToken).safeTransfer(to, amountOut);
         uint256 finalBalanceOut = IERC20(outToken).balanceOf(address(this));
-        uint256 actualAmountOut = initialBalanceOut - finalBalanceOut;
 
         if (side) {
-            _updateReserves(outReserve - actualAmountOut, inReserve + actualAmountIn, outReserve, inReserve);
-
-            emit Swap(msg.sender, 0, actualAmountIn, amountOut, 0, to);
+            _updateReserves(outReserve - amountOut, inReserve + actualAmountIn, outReserve, inReserve);
         } else {
-            _updateReserves(inReserve + actualAmountIn, outReserve - actualAmountOut, inReserve, outReserve);
-
-            emit Swap(msg.sender, actualAmountIn, 0, 0, amountOut, to);
+            _updateReserves(inReserve + actualAmountIn, outReserve - amountOut, inReserve, outReserve);
         }
+
+        // Prevent stack too deep errors by coping variables to memory
+        bool side_ = side;
+        uint256 amountIn_ = amountIn;
+        emit Swap(msg.sender, side_, amountIn_, amountOut, to);
     }
 
     function _updateReserves(uint256 newReserve0, uint256 newReserve1, uint112 currentReserve0, uint112 currentReserve1)
