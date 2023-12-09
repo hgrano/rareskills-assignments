@@ -33,7 +33,7 @@ reflective of more recent prices.
 
 > Why are price0CumulativeLast and price1CumulativeLast stored separately? Why not just calculate `price1CumulativeLast = 1/price0CumulativeLast?
 
-Let's say we only store price0CumulativeLast which is currently has a value of 10. And we need to add 1 to to calculate
+Let's say we only store price0CumulativeLast which is currently has a value of 10. And we need to add 1 it to calculate
 the new value:
 
 ```
