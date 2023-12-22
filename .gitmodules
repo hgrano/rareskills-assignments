@@ -16,3 +16,6 @@
 [submodule "week2-copy/lib/forge-std"]
 	path = week2-copy/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
+[submodule "week2-copy/lib/openzeppelin-contracts"]
+	path = week2-copy/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
