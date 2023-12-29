@@ -1,0 +1,115 @@
+Mutation testing report:
+Number of mutations:    10
+Killed:                 8 / 10
+
+Mutations:
+Mutation:
+    File: /home/huw/code/solidity/rareskills-assignments/week2-copy/src/RewardToken.sol
+    Line nr: 29
+    Result: Killed
+    Original line:
+                 _mint(to, amount);
+
+    Mutated line:
+                 
+
+
+Mutation:
+    File: /home/huw/code/solidity/rareskills-assignments/week2-copy/src/RewardDistributor.sol
+    Line nr: 54
+    Result: Killed
+    Original line:
+                 require(stakes[tokenId].owner == msg.sender, "RewardDistributor: only the owner can withdraw");
+
+    Mutated line:
+                 require(stakes[tokenId].owner != msg.sender, "RewardDistributor: only the owner can withdraw");
+
+
+Mutation:
+    File: /home/huw/code/solidity/rareskills-assignments/week2-copy/src/RewardDistributor.sol
+    Line nr: 46
+    Result: Killed
+    Original line:
+                     rewardToken.mint(stake.owner, numDays * 10);
+
+    Mutated line:
+                     rewardToken.mint(stake.owner, numDays / 10);
+
+
+Mutation:
+    File: /home/huw/code/solidity/rareskills-assignments/week2-copy/src/PrimeTokenIdsCounter.sol
+    Line nr: 18
+    Result: Killed
+    Original line:
+                     for (uint256 i = 0; i < balance; ++i) {
+
+    Mutated line:
+                     for (uint256 i = 0; i <= balance; ++i) {
+
+
+Mutation:
+    File: /home/huw/code/solidity/rareskills-assignments/week2-copy/src/RewardDistributor.sol
+    Line nr: 31
+    Result: Killed
+    Original line:
+                 require(msg.sender == address(nft), "RewardDistributor: can only receive NFTs from the expected contract");
+
+    Mutated line:
+                 require(msg.sender != address(nft), "RewardDistributor: can only receive NFTs from the expected contract");
+
+
+Mutation:
+    File: /home/huw/code/solidity/rareskills-assignments/week2-copy/src/RewardDistributor.sol
+    Line nr: 40
+    Result: Killed
+    Original line:
+                 require(stake.owner != address(0), "RewardDistributor: token is not staked");
+
+    Mutated line:
+                 require(stake.owner == address(0), "RewardDistributor: token is not staked");
+
+
+Mutation:
+    File: /home/huw/code/solidity/rareskills-assignments/week2-copy/src/NFTWithMerkleDiscount.sol
+    Line nr: 35
+    Result: Killed
+    Original line:
+                 _safeMint(to, tokenId);
+
+    Mutated line:
+                 
+
+
+Mutation:
+    File: /home/huw/code/solidity/rareskills-assignments/week2-copy/src/RewardToken.sol
+    Line nr: 20
+    Result: Lived
+    Original line:
+             function setMinter(address newMinter) external onlyOwner {
+
+    Mutated line:
+             function setMinter(address newMinter) external  {
+
+
+Mutation:
+    File: /home/huw/code/solidity/rareskills-assignments/week2-copy/src/NFTWithMerkleDiscount.sol
+    Line nr: 22
+    Result: Error
+    Original line:
+                 Ownable(owner_)
+
+    Mutated line:
+                 
+
+
+Mutation:
+    File: /home/huw/code/solidity/rareskills-assignments/week2-copy/src/RewardDistributor.sol
+    Line nr: 44
+    Result: Killed
+    Original line:
+                     uint256 nextCheckPoint = block.timestamp - (elapsed % (1 days));
+
+    Mutated line:
+                     uint256 nextCheckPoint = block.timestamp + (elapsed % (1 days));
+
+
