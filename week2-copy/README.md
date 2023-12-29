@@ -1,66 +1,26 @@
-## Foundry
+# NFT Variants and Staking Assignment
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+##  ERC721A
 
-Foundry consists of:
+ERC721A saves gas by not storing NFT metadata in a redundant way. For example, the base URI is stored as a single
+variable, to avoid storing an identical base URI for each token. It also allows for batch minting: when minting in
+batch the recipients balances are updated in a single increment, rather than mulitple increments for each NFT received.
+Additionally, it introduces a more efficient way to encode the ownership of tokens when we mint several to the same
+address. Say for example we mint token IDs 1 to 5 for Alice, and 6 to 10 for Bob, we only need to update the owners
+for tokens 1 and 6, as the owners for others are implied by ordering.
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+ERC721A adds cost on reads because of the extra complexity required to iterate over an appropriate token range when
+checking the owner of a token.
 
-## Documentation
+## Wrapped NFT
 
-https://book.getfoundry.sh/
+A wrapped NFT may also be useful to allow users to access new functionality that is not available with the underyling
+ERC721 contract. For example, being able to engage in lending, staking, voting or other features. Another example could
+be to make a gaming token available for use in other games.
 
-## Usage
+## ERC721 Events
 
-### Build
-
-```shell
-$ forge build
-```
-
-### Test
-
-```shell
-$ forge test
-```
-
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+OpenSea can quickly determine what NFTs an address owns because each ERC721 contract emits a `Transfer` events on each
+transfer. The `Transfer` events have an index on the sender/receiver fields. If we do a query on the `Transfer` events
+where sender or receiver are equal to the address in question, we can determine what token IDs the address owns. We just
+filter out NFTs which the address has transfered out.
