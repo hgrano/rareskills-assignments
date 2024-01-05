@@ -61,4 +61,21 @@ contract RewardDistributorTest is Test {
         vm.prank(to0);
         rewardDistributor.claimRewards(0);
     }
+
+    function test_cannotWithdrawOtherUsersStake() public {
+        vm.prank(to0);
+        nft.safeTransferFrom(to0, address(rewardDistributor), 0);
+        vm.prank(address(3));
+        vm.expectRevert("RewardDistributor: only the owner can withdraw");
+        rewardDistributor.withdraw(0);
+    }
+
+    function test_onERC721ReceivedFromOtherAddress() public {
+        vm.expectRevert("RewardDistributor: can only receive NFTs from the expected contract");
+        rewardDistributor.onERC721Received(address(this), address(this), 0, "");
+    }
+
+    // function test_onlyOwnerCanSetRewardTokenMinter() public {
+    //     vm.expectRevert()
+    // }
 }

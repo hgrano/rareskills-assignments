@@ -1,0 +1,38 @@
+Mutation testing report:
+Number of mutations:    3
+Killed:                 3 / 3
+
+Mutations:
+Mutation:
+    File: /home/huw/code/solidity/rareskills-assignments/week2-copy/src/RewardToken.sol
+    Line nr: 29
+    Result: Killed
+    Original line:
+                 _mint(to, amount);
+
+    Mutated line:
+                 
+
+
+Mutation:
+    File: /home/huw/code/solidity/rareskills-assignments/week2-copy/src/PrimeTokenIdsCounter.sol
+    Line nr: 21
+    Result: Killed
+    Original line:
+                             if (tokenId % divisor == 0) {
+
+    Mutated line:
+                             if (tokenId % divisor != 0) {
+
+
+Mutation:
+    File: /home/huw/code/solidity/rareskills-assignments/week2-copy/src/EnumerableNFT.sol
+    Line nr: 23
+    Result: Killed
+    Original line:
+                 _mint(to, tokenId);
+
+    Mutated line:
+                 
+
+

@@ -73,6 +73,18 @@ contract NFTWithMerkleDiscountTest is Test {
         assertEq(royaltyAmount, 50);
     }
 
+    function test_withdawFunds() public {
+        vm.prank(owner);
+        nft.withdrawFunds();
+    }
+
+    // TODO
+    // function test_withdrawFundsWithCallFailure() public {
+    //     vm.prank(owner);
+    //     nft.transferOwnership(address(this));
+    //     nft
+    // }
+
     function hashPair(bytes32 a, bytes32 b) private pure returns (bytes32) {
         if (a < b) {
             return keccak256(abi.encodePacked(a, b));
