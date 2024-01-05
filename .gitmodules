@@ -19,3 +19,6 @@
 [submodule "week2-copy/lib/openzeppelin-contracts"]
 	path = week2/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "week7-fuzzing/dex/lib/openzeppelin-contracts"]
+	path = week7-fuzzing/dex/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
