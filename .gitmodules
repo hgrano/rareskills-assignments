@@ -22,3 +22,6 @@
 [submodule "week7-fuzzing/dex/lib/openzeppelin-contracts"]
 	path = week7-fuzzing/dex/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "security1/ethernaut-solutions/lib/forge-std"]
+	path = security1/ethernaut-solutions/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
