@@ -15,6 +15,7 @@ contract DenialTest is Test {
     function testAttack() public {
         DenialAttacker attacker = new DenialAttacker();
         denial.setWithdrawPartner(address(attacker));
+        vm.expectRevert();
         denial.withdraw{gas: 1e6}();
     }
 }
