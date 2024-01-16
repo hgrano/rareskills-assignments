@@ -25,3 +25,6 @@
 [submodule "security1/ethernaut-solutions/lib/forge-std"]
 	path = security1/ethernaut-solutions/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
+[submodule "security1/ethernaut-solutions/lib/openzeppelin-contracts"]
+	path = security1/ethernaut-solutions/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
