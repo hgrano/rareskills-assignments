@@ -24,6 +24,16 @@ If we call the `mint` function during construction of a contract, the `msg.sende
 
 Solution: https://github.com/hgrano/solidity-riddles/blob/main/contracts/Democracy.sol, https://github.com/hgrano/solidity-riddles/blob/main/test/Democracy.js
 
-To win the election we need to vote 3 times to get a majority, but the election would normally be called after 2 votes due to this [check](https://github.com/hgrano/solidity-riddles/blob/77f898d58ade3463077ea4c956815e4257d5e1be/contracts/Democracy.sol#L104-L106). However we can re-enter the `vote` function before this occurs, because the `Democracy` contract does a transfer to the `msg.sender` before this. Each Hodler can only vote once, thererfore the caller of `vote` needs to re-enter via another contract which also has a balance of 1 token.
+To win the election we need to vote 3 times to get a majority, but the election would normally be called after 2 votes due to this [check](https://github.com/hgrano/solidity-riddles/blob/77f898d58ade3463077ea4c956815e4257d5e1be/contracts/Democracy.sol#L104-L106). However we can re-enter the `vote` function before this occurs, because the `Democracy` contract does a transfer to the `msg.sender` before this. Each Hodler can only vote once, thererfore the caller of `vote` needs to re-enter via another contract which also has a balance of 1 token. We first vote once as the `challenger`, then transfer one token to an attacker contract, and another token to a second attacker contract. Then the first attacker can call `vote` and re-enter `vote` via the second attacker.
 
 ### Ethernaut #13 Gatekeeper 1
+
+Solution:
+
+Passing `gateOne` is easy - we just need to call `enter` via a smart contract rather than using an EOA. To get through `gateTwo` we need to call `enter` using a gas limit that results in `gasLeft()` being equal to a multiple of 8191 during the `require` statement. We can try many different values of the gas limit by doing a low-level call to `enter` (this way our function will not bubble up the revert), until we hit a value that works. To get through `gateThree` we need the following to be true based on the three require statements:
+
+1. The 17th to the 32nd bit of the `_gateKey` must all be zero.
+1. The 33rd to the 64th bit of the `_gateKey` must contain at least one non-zero bit.
+1. The first 16 bits of the `_gateKey` must be equal to the first 16 bits of the `tx.origin`.
+
+We can achieve these requirements with bit-wise operations.
