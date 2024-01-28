@@ -28,7 +28,7 @@ To win the election we need to vote 3 times to get a majority, but the election 
 
 ### Ethernaut #13 Gatekeeper 1
 
-Solution:
+Solution: https://github.com/hgrano/rareskills-assignments/blob/main/ethernaut-solutions/src/GatekeeperOne.sol
 
 Passing `gateOne` is easy - we just need to call `enter` via a smart contract rather than using an EOA. To get through `gateTwo` we need to call `enter` using a gas limit that results in `gasLeft()` being equal to a multiple of 8191 during the `require` statement. We can try many different values of the gas limit by doing a low-level call to `enter` (this way our function will not bubble up the revert), until we hit a value that works. To get through `gateThree` we need the following to be true based on the three require statements:
 
