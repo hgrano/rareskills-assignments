@@ -36,4 +36,8 @@ Passing `gateOne` is easy - we just need to call `enter` via a smart contract ra
 1. The 33rd to the 64th bit of the `_gateKey` must contain at least one non-zero bit.
 1. The first 16 bits of the `_gateKey` must be equal to the first 16 bits of the `tx.origin`.
 
-We can achieve these requirements with bit-wise operations.
+We can achieve these requirements as follows:
+
+1. To get necessary bits as zero, we do a bit-wise AND with a value with all zeros in these positions.
+1. To get non-zero bits, we do a bit-wise OR with a value that has all ones in these positions.
+1. We initialise the gate key with the first 16 bits of the `tx.origin` using casting, then follow this up with the above bit-wise operations.
