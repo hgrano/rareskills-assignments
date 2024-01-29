@@ -41,3 +41,28 @@ We can achieve these requirements as follows:
 1. To get necessary bits as zero, we do a bit-wise AND with a value with all zeros in these positions.
 1. To get non-zero bits, we do a bit-wise OR with a value that has all ones in these positions.
 1. We initialise the gate key with the first 16 bits of the `tx.origin` using casting, then follow this up with the above bit-wise operations.
+
+## Fourth week
+
+### RareSkills Riddles: Delete user (understanding storage pointers)
+
+Solution: https://github.com/hgrano/solidity-riddles/blob/main/contracts/DeleteUser.sol
+
+The `withdraw` function does not delete the user at the provided `index`, instead it just re-assigns the storage pointer variable (`user`) and removes the last element in the `users` array. Therefore we can call `withdraw` multiple times uisng the same `index` - provided we add some extra deposits with zero value (these will be appended to the `users` and can be popped from the array with no adverse affect to the attacker).
+
+### RareSkills Riddles: Viceroy (understanding the delete keyword)
+
+Solution: https://github.com/hgrano/solidity-riddles/blob/main/contracts/Viceroy.sol
+
+The solution boils down to the following issues:
+
+1. A viceroy or voter can be appointed even if it is not an EOA, because it can be done during construction of the contract.
+1. A viceroy can approve a voter, allow them to vote, then disapprove the voter. This process can be repeated an unlimited number of times. Therefore they can accumulate more than 5 votes.
+
+### Ethernaut #23 Dex2 (access control / input validation)
+### Damn Vulnerable DeFi #2 Naive Receiver (access control / input validation)
+### RareSkills Riddles: RewardToken (cross function reentrancy)
+### RareSkills Riddles: Read-only reentrancy (read-only reentrancy)
+### Damn Vulnerable DeFi #5 (flash loan attack)
+### Damn Vulnerable DeFi #6 (flash loan attack)
+
