@@ -61,6 +61,11 @@ The solution boils down to the following issues:
 1. The proposal payload can be crafted so that when executed, it calls the `exec` function on the `CommunityWallet` which in-turn sends ether to the attacker.
 
 ### Ethernaut #23 Dex2 (access control / input validation)
+
+Solution: https://github.com/hgrano/rareskills-assignments/blob/main/ethernaut-solutions/test/DexTwo.t.sol
+
+The problem with this contract is it does not validate the `from` or `to` tokens during the `swap` function. We can therefore deploy our own ERC20 token to manipulate the prices of `token1` / `token2` when measured in terms of our own token. This is done by manipulating the balance of the Dex on our own token.
+
 ### Damn Vulnerable DeFi #2 Naive Receiver (access control / input validation)
 ### RareSkills Riddles: RewardToken (cross function reentrancy)
 ### RareSkills Riddles: Read-only reentrancy (read-only reentrancy)
