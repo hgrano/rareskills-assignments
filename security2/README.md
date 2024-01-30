@@ -58,6 +58,7 @@ The solution boils down to the following issues:
 
 1. A viceroy or voter can be appointed even if it is not an EOA, because it can be done during construction of the contract.
 1. A viceroy can approve a voter, allow them to vote, then disapprove the voter. This process can be repeated an unlimited number of times. Therefore they can accumulate more than 5 votes.
+1. The proposal payload can be crafted so that when executed, it calls the `exec` function on the `CommunityWallet` which in-turn sends ether to the attacker.
 
 ### Ethernaut #23 Dex2 (access control / input validation)
 ### Damn Vulnerable DeFi #2 Naive Receiver (access control / input validation)
