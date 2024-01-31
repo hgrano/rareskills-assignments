@@ -84,6 +84,11 @@ The attacker contract can exploit as follows:
 1. Repeat the above step until all funds are drained from the victim.
 
 ### RareSkills Riddles: Read-only reentrancy (read-only reentrancy)
+
+Solution: https://github.com/hgrano/solidity-riddles/blob/main/contracts/ReadOnly.sol, https://github.com/hgrano/solidity-riddles/blob/main/test/ReadOnly.js
+
+We can exploit the fact that the `ReadOnlyPool` hands control back to the LP before burning the LP tokens. While the LP has control the number of tokens in the pool will be greater than the amount of Ether. In their receive/fallback function they can then call the `snapshotPrice`.
+
 ### Damn Vulnerable DeFi #5 (flash loan attack)
 ### Damn Vulnerable DeFi #6 (flash loan attack)
 
