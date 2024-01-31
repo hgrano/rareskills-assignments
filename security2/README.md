@@ -67,6 +67,11 @@ Solution: https://github.com/hgrano/rareskills-assignments/blob/main/ethernaut-s
 The problem with this contract is it does not validate the `from` or `to` tokens during the `swap` function. We can therefore deploy our own ERC20 token to manipulate the prices of `token1` / `token2` when measured in terms of our own token. This is done by manipulating the balance of the Dex on our own token.
 
 ### Damn Vulnerable DeFi #2 Naive Receiver (access control / input validation)
+
+Solution: https://github.com/hgrano/damn-vulnerable-defi/blob/security2/test/naive-receiver/naive-receiver.challenge.js
+
+The receiver does not check who initiated the flash loan. The attacker can initiate the loan by calling `flashLoan` on the pool and setting the `receiver` as the victim. This forces the victim to pay back the fee. This process can be repeated several times to drain all funds from the victim.
+
 ### RareSkills Riddles: RewardToken (cross function reentrancy)
 ### RareSkills Riddles: Read-only reentrancy (read-only reentrancy)
 ### Damn Vulnerable DeFi #5 (flash loan attack)
