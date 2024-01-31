@@ -68,7 +68,7 @@ The problem with this contract is it does not validate the `from` or `to` tokens
 
 ### Damn Vulnerable DeFi #2 Naive Receiver (access control / input validation)
 
-Solution: https://github.com/hgrano/damn-vulnerable-defi/blob/security2/test/naive-receiver/naive-receiver.challenge.js
+Solution: https://github.com/hgrano/damn-vulnerable-defi/blob/main/test/naive-receiver/naive-receiver.challenge.js
 
 The receiver does not check who initiated the flash loan. The attacker can initiate the loan by calling `flashLoan` on the pool and setting the `receiver` as the victim. This forces the victim to pay back the fee. This process can be repeated several times to drain all funds from the victim.
 
