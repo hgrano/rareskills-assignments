@@ -73,6 +73,16 @@ Solution: https://github.com/hgrano/damn-vulnerable-defi/blob/main/test/naive-re
 The receiver does not check who initiated the flash loan. The attacker can initiate the loan by calling `flashLoan` on the pool and setting the `receiver` as the victim. This forces the victim to pay back the fee. This process can be repeated several times to drain all funds from the victim.
 
 ### RareSkills Riddles: RewardToken (cross function reentrancy)
+
+Solution: https://github.com/hgrano/solidity-riddles/blob/main/contracts/RewardToken.sol, https://github.com/hgrano/solidity-riddles/blob/main/test/RewardToken.js
+
+The attacker contract can exploit as follows:
+
+1. Deposit the NFT.
+1. Wait for some time, so we are eligible to claim some rewards.
+1. Call the `withdrawAndClaimEarnings`, and during the attacker's `onERC721Received` function, transfer back the NFT and re-enter the `withdrawAndClaimEarnings` function as we can get the rewards again.
+1. Repeat the above step until all funds are drained from the victim.
+
 ### RareSkills Riddles: Read-only reentrancy (read-only reentrancy)
 ### Damn Vulnerable DeFi #5 (flash loan attack)
 ### Damn Vulnerable DeFi #6 (flash loan attack)
