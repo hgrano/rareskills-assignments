@@ -50,7 +50,7 @@ The `buy` function uses unchecked arithmetic when calculating the `total` amount
 
 Solution: https://github.com/hgrano/capture-the-ether-foundry/blob/master/RetirementFund/src/RetirementFund.sol, https://github.com/hgrano/capture-the-ether-foundry/blob/master/RetirementFund/test/RetirementFund.t.sol
 
-The `collectPenalty` function allows the user to withdraw all funds as long as the `startBalance - address(this.balance) > 0` (using `unchcked`). If we forcilby transfer ether to the contract (using `selfdestruct`) we can make `address(this.balance) > startBalance` and hence overflow this calculation. Then we can call `collectPenalty` and drain all balance of the contract.
+The `collectPenalty` function allows the user to withdraw all funds as long as the `startBalance - address(this.balance) > 0` (using `unchecked`). If we forcilby transfer ether to the contract (using `selfdestruct`) we can make `address(this.balance) > startBalance` and hence overflow this calculation. Then we can call `collectPenalty` and drain all balance of the contract.
 
 ### Damn Vulnerable Defi #4 Side Entrance (Most vulnerabilities are application specific)
 
