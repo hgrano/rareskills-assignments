@@ -10,7 +10,7 @@ The forwarder contract allows to call any arbitrary function on any contract. We
 
 ### Damn Vulnerable Defi #3 Truster (this is challenging)
 
-Solution: https://github.com/hgrano/damn-vulnerable-defi/blob/main/test/truster/truster.challenge.js
+Solution: https://github.com/hgrano/damn-vulnerable-defi/blob/master/test/truster/truster.challenge.js
 
 The `TrusterLenderPool` contract allows the attacker to make the `TrustLenderPool` call any desired function on the `target` contract. Therefore, we can can make the `TrusterLenderPool` call `approve` on the token contract, thus giving the attacker control of the pool's funds.
 
@@ -68,7 +68,7 @@ The problem with this contract is it does not validate the `from` or `to` tokens
 
 ### Damn Vulnerable DeFi #2 Naive Receiver (access control / input validation)
 
-Solution: https://github.com/hgrano/damn-vulnerable-defi/blob/main/test/naive-receiver/naive-receiver.challenge.js
+Solution: https://github.com/hgrano/damn-vulnerable-defi/blob/master/test/naive-receiver/naive-receiver.challenge.js
 
 The receiver does not check who initiated the flash loan. The attacker can initiate the loan by calling `flashLoan` on the pool and setting the `receiver` as the victim. This forces the victim to pay back the fee. This process can be repeated several times to drain all funds from the victim.
 
@@ -91,7 +91,7 @@ We can exploit the fact that the `ReadOnlyPool` hands control back to the LP bef
 
 ### Damn Vulnerable DeFi #5 (flash loan attack)
 
-Solution: https://github.com/hgrano/damn-vulnerable-defi/blob/main/contracts/the-rewarder/TheRewarderAttacker.sol
+Solution: https://github.com/hgrano/damn-vulnerable-defi/blob/master/contracts/the-rewarder/TheRewarderAttacker.sol
 
 The attack works as follows:
 
