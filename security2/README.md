@@ -90,5 +90,17 @@ Solution: https://github.com/hgrano/solidity-riddles/blob/main/contracts/ReadOnl
 We can exploit the fact that the `ReadOnlyPool` hands control back to the LP before burning the LP tokens. While the LP has control the number of tokens in the pool will be greater than the amount of Ether. In their receive/fallback function they can then call the `snapshotPrice`.
 
 ### Damn Vulnerable DeFi #5 (flash loan attack)
+
+Solution: https://github.com/hgrano/damn-vulnerable-defi/blob/main/contracts/the-rewarder/TheRewarderAttacker.sol
+
+The attack works as follows:
+
+1. Take out a flash loan at the right time -- such that at least 5 days have passed since the last snapshot.
+1. On receiving the loaned token, use it to `deposit` into the `TheRewarderPool`. Due to the timing, this will cause a new snapshot to be created after the `mint` function is called on the reward token. Thus, the attacker contract will receive rewards.
+1. Transfer the rewards to the `player`
+1. Call `withdraw` to take back the liquidity token and send it back to the lending pool to repay the loan.
+
+Note that the total supply of the accounting token will go up significantly during the exploited round, causing the share of rewards given to the other users to be very small for this round.
+
 ### Damn Vulnerable DeFi #6 (flash loan attack)
 
