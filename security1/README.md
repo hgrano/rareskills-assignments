@@ -72,12 +72,12 @@ The problem with the contract is that if a user directly transfers the token to 
 
 ### Ethernaut #20 Denial
 
-Solution: https://github.com/hgrano/rareskills-assignments/blob/main/security1/ethernaut-solutions/src/Denial.sol
+Solution: https://github.com/hgrano/rareskills-assignments/blob/main/ethernaut-solutions/src/Denial.sol
 
 By setting the withdraw partner to be a malicious contract with a `receive` function that drains all available gas, when we transfer ether to them [here](https://github.com/hgrano/rareskills-assignments/blob/d2218bb69868e52c9a7571dd13ee68ad7be83b87/security1/ethernaut-solutions/src/Denial.sol#L19) the transaction will revert with out of gas error. This happens even though we ignore the return value of the low level `call.`
 
 ### Ethernaut #15 Naught Coin
 
-Solution: https://github.com/hgrano/rareskills-assignments/blob/main/security1/ethernaut-solutions/test/NaughtCoin.t.sol
+Solution: https://github.com/hgrano/rareskills-assignments/blob/main/ethernaut-solutions/test/NaughtCoin.t.sol
 
 This is a very basic error in the contract where the `transferFrom` function does not include the `lockTokens` modifier. The developer should have put the modifier on the internal function (`_update`) which OpenZeppelin's ERC20 implementation uses for all types of transfers.
