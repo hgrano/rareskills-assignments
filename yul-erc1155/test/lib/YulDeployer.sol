@@ -11,7 +11,7 @@ contract YulDeployer is Test {
     function deployContract(string memory fileName) public returns (address) {
         string memory bashCommand = string.concat(
             'cast abi-encode "f(bytes)" $(solc --strict-assembly yul/',
-            string.concat(fileName, '.yul | grep "Binary" -A 1 | tail -1)')
+            string.concat(fileName, '.yul | grep "Binary representation:" -A 1 | tail -1)')
         );
 
         string[] memory inputs = new string[](3);
