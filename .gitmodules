@@ -34,3 +34,6 @@
 [submodule "yul-erc1155/lib/solmate"]
 	path = yul-erc1155/lib/solmate
 	url = https://github.com/transmissions11/solmate
+[submodule "yul-erc1155/lib/openzeppelin-contracts"]
+	path = yul-erc1155/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
