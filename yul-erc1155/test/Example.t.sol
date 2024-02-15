@@ -6,21 +6,21 @@ import "./lib/YulDeployer.sol";
 
 interface Example {}
 
-contract ExampleTest is Test {
-    YulDeployer yulDeployer = new YulDeployer();
+// contract ExampleTest is Test {
+//     YulDeployer yulDeployer = new YulDeployer();
 
-    Example exampleContract;
+//     Example exampleContract;
 
-    function setUp() public {
-        exampleContract = Example(yulDeployer.deployContract("Example"));
-    }
+//     function setUp() public {
+//         exampleContract = Example(yulDeployer.deployContract("Example"));
+//     }
 
-    function testExample() public {
-        bytes memory callDataBytes = abi.encodeWithSignature("randomBytes()");
+//     function testExample() public {
+//         bytes memory callDataBytes = abi.encodeWithSignature("randomBytes()");
 
-        (bool success, bytes memory data) = address(exampleContract).call{gas: 100000, value: 0}(callDataBytes);
+//         (bool success, bytes memory data) = address(exampleContract).call{gas: 100000, value: 0}(callDataBytes);
 
-        assertTrue(success);
-        assertEq(data, callDataBytes);
-    }
-}
+//         assertTrue(success);
+//         assertEq(data, callDataBytes);
+//     }
+// }

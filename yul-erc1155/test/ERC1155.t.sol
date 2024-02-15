@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-pragma solidity 0.8.15;
+pragma solidity 0.8.20;
 
-import {DSTestPlus} from "solmate/test/utils/DSTestPlus.sol";
-import {DSInvariantTest} from "solmate/test/utils/DSInvariantTest.sol";
+import {DSTestPlus} from "@solmate/test/utils/DSTestPlus.sol";
+import {DSInvariantTest} from "@solmate/test/utils/DSInvariantTest.sol";
+
+import {ExtendedIERC1155} from "./ExtendedIERC1155.sol";
 
 import {MockERC1155} from "solmate/test/utils/mocks/MockERC1155.sol";
 
 import {ERC1155TokenReceiver} from "solmate/tokens/ERC1155.sol";
+
+import "./lib/YulDeployer.sol";
 
 contract ERC1155Recipient is ERC1155TokenReceiver {
     address public operator;
@@ -109,13 +113,14 @@ contract WrongReturnDataERC1155Recipient is ERC1155TokenReceiver {
 contract NonERC1155Recipient {}
 
 contract ERC1155Test is DSTestPlus, ERC1155TokenReceiver {
-    MockERC1155 token;
+    ExtendedIERC1155 token;
+    YulDeployer yulDeployer = new YulDeployer();
 
     mapping(address => mapping(uint256 => uint256)) public userMintAmounts;
     mapping(address => mapping(uint256 => uint256)) public userTransferOrBurnAmounts;
 
     function setUp() public {
-        token = new MockERC1155();
+        token = ExtendedIERC1155(yulDeployer.deployContract(address(this), "ERC1155"));
     }
 
     function testMintToEOA() public {
