@@ -21,9 +21,14 @@ object "Token" {
                 revert (0, 0) // TODO implement
             }
             case 0xb48ab8b6 /* "batchMint(address,uint256[],uint256[],bytes)" */ {
-                revert (0, 0) // TODO implement
+                require(calledByOwner())
+                let idsPos, idsLength := decodeArray(1)
+                let amountsPos, amountsLength := decodeArray(2)
+                require(eq(idsLength, amountsLength))
+                batchMint(decodeAsAddress(0), idsPos, amountsPos, idsLength)
             }
             case 0xf5298aca /* "burn(address,uint256,uint256)" */ {
+                require(calledByOwner())
                 burn(decodeAsAddress(0), decodeAsUint(1), decodeAsUint(2))
                 return (0, 0)
             }
@@ -31,6 +36,7 @@ object "Token" {
                 returnUint(isApproved(decodeAsAddress(0), decodeAsAddress(1)))
             }
             case 0x731133e9 /* "mint(address,uint256,uint256,bytes)" */ {
+                require(calledByOwner())
                 mint(decodeAsAddress(0), decodeAsUint(1), decodeAsUint(2))
                 return(0, 0)
             }
@@ -53,22 +59,21 @@ object "Token" {
             }
 
             function mint(account, tokenId, amount) {
-                require(calledByOwner())
-
                 addToBalance(account, tokenId, amount)
                 emitTransferSingle(caller(), 0, account, tokenId, amount)
             }
-            function burn(account, tokenId, amount) {
-                require(calledByOwner())
 
+            function burn(account, tokenId, amount) {
                 deductFromBalance(account, tokenId, amount)
                 emitTransferSingle(caller(), account, 0, tokenId, amount)
             }
+
             function approve(spender, approved) {
                 revertIfZeroAddress(spender)
                 setApproval(caller(), spender, approved)
                 emitApprovalForAll(caller(), spender, approved)
             }
+
             function transferFrom(from, to, tokenId, amount) {
                 require(isApproved(from, caller()))
                 executeTransfer(from, to, tokenId, amount)
@@ -79,6 +84,16 @@ object "Token" {
                 deductFromBalance(from, tokenId, amount)
                 addToBalance(to, tokenId, amount)
                 emitTransferSingle(caller(), from, to, tokenId, amount)
+            }
+
+            function batchMint(account, idsPos, amountsPos, length) {
+                for { let i := 0 } lt(i, length) { i := add(i, 1) } {
+                    let offset := mul(i, 0x20)
+                    let tokenId := calldataload(add(idsPos, offset))
+                    let amount := calldataload(add(amountsPos, offset))
+
+                    mint(account, tokenId, amount)
+                }
             }
 
 
@@ -99,6 +114,11 @@ object "Token" {
                     revert(0, 0)
                 }
                 v := calldataload(pos)
+            }
+            function decodeArray(offset) -> beginPos, length {
+                let pos := add(4, decodeAsUint(offset))
+                length := calldataload(pos)
+                beginPos := add(0x20, pos)
             }
             /* ---------- calldata encoding functions ---------- */
             function returnUint(v) {

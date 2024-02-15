@@ -7,14 +7,14 @@ interface ExtendedIERC1155 is IERC1155 {
         address to,
         uint256 id,
         uint256 amount,
-        bytes memory data
+        bytes calldata data
     ) external;
 
     function batchMint(
         address to,
-        uint256[] memory ids,
-        uint256[] memory amounts,
-        bytes memory data
+        uint256[] calldata ids,
+        uint256[] calldata amounts,
+        bytes calldata data
     ) external;
 
     function burn(
@@ -25,7 +25,7 @@ interface ExtendedIERC1155 is IERC1155 {
 
     function batchBurn(
         address from,
-        uint256[] memory ids,
-        uint256[] memory amounts
+        uint256[] calldata ids,
+        uint256[] calldata amounts
     ) external;
 }
