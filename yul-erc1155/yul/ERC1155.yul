@@ -22,10 +22,10 @@ object "Token" {
             }
             case 0xb48ab8b6 /* "batchMint(address,uint256[],uint256[],bytes)" */ {
                 require(calledByOwner())
-                let idsPos, idsLength := decodeArray(1)
-                let amountsPos, amountsLength := decodeArray(2)
-                require(eq(idsLength, amountsLength))
-                batchMint(decodeAsAddress(0), idsPos, amountsPos, idsLength)
+                let idsPos, idsLastOffset := decodeArray(1)
+                let amountsPos, amountsLastOffset := decodeArray(2)
+                require(eq(idsLastOffset, amountsLastOffset))
+                batchMint(decodeAsAddress(0), idsPos, amountsPos, idsLastOffset)
             }
             case 0xf5298aca /* "burn(address,uint256,uint256)" */ {
                 require(calledByOwner())
@@ -86,9 +86,8 @@ object "Token" {
                 emitTransferSingle(caller(), from, to, tokenId, amount)
             }
 
-            function batchMint(account, idsPos, amountsPos, length) {
-                for { let i := 0 } lt(i, length) { i := add(i, 1) } {
-                    let offset := mul(i, 0x20)
+            function batchMint(account, idsPos, amountsPos, lastOffset) {
+                for { let offset := 0 } lt(offset, lastOffset) { offset := add(offset, 0x20) } {
                     let tokenId := calldataload(add(idsPos, offset))
                     let amount := calldataload(add(amountsPos, offset))
 
@@ -115,9 +114,9 @@ object "Token" {
                 }
                 v := calldataload(pos)
             }
-            function decodeArray(offset) -> beginPos, length {
+            function decodeArray(offset) -> beginPos, lastOffset {
                 let pos := add(4, decodeAsUint(offset))
-                length := calldataload(pos)
+                lastOffset := mul(0x20, calldataload(pos))
                 beginPos := add(0x20, pos)
             }
             /* ---------- calldata encoding functions ---------- */
