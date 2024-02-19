@@ -22,10 +22,15 @@ object "Token" {
             }
             case 0xb48ab8b6 /* "batchMint(address,uint256[],uint256[],bytes)" */ {
                 require(calledByOwner())
-                let idsPos, idsLastOffset := decodeArray(1)
-                let amountsPos, amountsLastOffset := decodeArray(2)
+                let idsPos, idsLastOffset := decodeArray(1, 0x20)
+                let amountsPos, amountsLastOffset := decodeArray(2, 0x20)
                 require(eq(idsLastOffset, amountsLastOffset))
-                batchMint(decodeAsAddress(0), idsPos, amountsPos, idsLastOffset)
+                let account := decodeAsAddress(0)
+                batchMint(account, idsPos, amountsPos, idsLastOffset)
+                if isContract(account) {
+                    let bytesPos, bytesLen := decodeArray(3, 1)
+                    checkBatchAcceptance(account, 0, idsPos, amountsPos, idsLastOffset, bytesPos, bytesLen)
+                }
             }
             case 0xf5298aca /* "burn(address,uint256,uint256)" */ {
                 require(calledByOwner())
@@ -37,7 +42,14 @@ object "Token" {
             }
             case 0x731133e9 /* "mint(address,uint256,uint256,bytes)" */ {
                 require(calledByOwner())
-                mint(decodeAsAddress(0), decodeAsUint(1), decodeAsUint(2))
+                let account := decodeAsAddress(0)
+                let tokenId := decodeAsUint(1)
+                let amount := decodeAsUint(2)
+                mint(account, tokenId, amount)
+                if isContract(account) {
+                    let dataPos, dataSize := decodeArray(3, 1)
+                    checkAcceptance(account, 0, tokenId, amount, dataPos, dataSize)
+                }
                 return(0, 0)
             }
             case 0x2eb2c2d6 /* "safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)" */ {
@@ -91,10 +103,46 @@ object "Token" {
                     let tokenId := calldataload(add(idsPos, offset))
                     let amount := calldataload(add(amountsPos, offset))
 
-                    mint(account, tokenId, amount)
+                    addToBalance(account, tokenId, amount)
                 }
+
+                // TODO emit transfer batch
             }
 
+            function checkAcceptance(account, from, id, value, dataPos, bytesSize) {
+                let sel := 0xf23a6e6100000000000000000000000000000000000000000000000000000000 // onERC1155Received(address,address,uint256,uint256,bytes)
+                mstore(0, sel)
+                mstore(0x04, caller())
+                mstore(0x24, from)
+                mstore(0x44, id)
+                mstore(0x64, value)
+                mstore(0x84, 0xa0) // pointer to start of `data`
+                copyDataToMemoryFromPos(dataPos, bytesSize, 1, 0xa4)
+                let inputSize := add(bytesSize, 0xc4) // Space for 4 bytes for selector, 4 static arguments, and one dynamic argument
+                require(call(gas(), account, 0, 0, inputSize, inputSize, 4))
+                require(eq(mload(inputSize), sel))
+            }
+
+            function checkBatchAcceptance(account, from, idsPos, amountsPos, idsLen, bytesPos, bytesLen) {
+                let sel := 0xbc197c8100000000000000000000000000000000000000000000000000000000 // onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)
+                mstore(0, sel)
+                mstore(0x04, caller())
+                mstore(0x24, from)
+                let idsLoc := 0xa4
+                let amountsLoc := add(0xc4, idsLen)
+                let dataLoc := add(0xe4, mul(idsLen, 2))
+                mstore(0x44, sub(idsLoc, 4)) // pointer to start of `ids`
+                mstore(0x64, sub(amountsLoc, 4)) // pointer to start of `values`
+                mstore(0x84, sub(dataLoc, 4)) // pointer to start of `data`
+
+                copyDataToMemoryFromPos(idsPos, idsLen, 0x20, idsLoc) // copy `ids`
+                copyDataToMemoryFromPos(amountsPos, idsLen, 0x20, amountsLoc) // copy `amounts`
+                copyDataToMemoryFromPos(bytesPos, bytesLen, 1, dataLoc) // copy `bytes`
+
+                let inputSize := add(0x20, add(dataLoc, bytesLen))
+                require(call(gas(), account, 0, 0, inputSize, inputSize, 4))
+                require(eq(mload(inputSize), sel))
+            }
 
             /* ---------- calldata decoding functions ----------- */
             function selector() -> s {
@@ -114,11 +162,24 @@ object "Token" {
                 }
                 v := calldataload(pos)
             }
-            function decodeArray(offset) -> beginPos, lastOffset {
+            function decodeArray(offset, elementSize) -> beginPos, lastOffset {
                 let pos := add(4, decodeAsUint(offset))
-                lastOffset := mul(0x20, calldataload(pos))
+                lastOffset := mul(elementSize, calldataload(pos))
                 beginPos := add(0x20, pos)
             }
+
+            // Copy array-like data to memory
+            function copyDataToMemory(offset, elementSize, destOffset) -> lastOffset {
+                let beginPos
+                    beginPos, lastOffset := decodeArray(offset, elementSize)
+                copyDataToMemoryFromPos(beginPos, lastOffset, elementSize, destOffset)
+            }
+            function copyDataToMemoryFromPos(beginPos, lastOffset, elementSize, destOffset) {
+                let dataStart := add(destOffset, 0x20)
+                calldatacopy(dataStart, beginPos, lastOffset)
+                mstore(destOffset, div(lastOffset, elementSize))
+            }
+
             /* ---------- calldata encoding functions ---------- */
             function returnUint(v) {
                 mstore(0, v)
@@ -193,6 +254,9 @@ object "Token" {
             }
             function revertIfZeroAddress(addr) {
                 require(addr)
+            }
+            function isContract(addr) -> ic {
+                ic := gt(extcodesize(addr), 0)
             }
             function require(condition) {
                 if iszero(condition) { revert(0, 0) }
