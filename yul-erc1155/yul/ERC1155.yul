@@ -20,6 +20,14 @@ object "Token" {
             case 0x4e1273f4 /* "balanceOfBatch(address[],uint256[])" */ {
                 revert (0, 0) // TODO implement
             }
+            case 0xf6eb127a /* "batchBurn(address,uint256[],uint256[])" */ {
+                require(calledByOwner())
+                let idsPos, idsLength := decodeArray(1)
+                let amountsPos, amountsLength := decodeArray(2)
+                require(eq(idsLength, amountsLength))
+                let account := decodeAsAddress(0)
+                batchBurn(account, idsPos, amountsPos, idsLength)
+            }
             case 0xb48ab8b6 /* "batchMint(address,uint256[],uint256[],bytes)" */ {
                 require(calledByOwner())
                 let idsPos, idsLength := decodeArray(1)
@@ -35,7 +43,6 @@ object "Token" {
             case 0xf5298aca /* "burn(address,uint256,uint256)" */ {
                 require(calledByOwner())
                 burn(decodeAsAddress(0), decodeAsUint(1), decodeAsUint(2))
-                return (0, 0)
             }
             case 0xe985e9c5 /* "isApprovedForAll(address,address)" */ {
                 returnUint(isApprovedOrOwner(decodeAsAddress(0), decodeAsAddress(1)))
@@ -47,21 +54,35 @@ object "Token" {
                 let amount := decodeAsUint(2)
                 mint(account, tokenId, amount)
                 if isContract(account) {
-                    let dataPos, dataSize := decodeArray(3)
-                    checkAcceptance(account, 0, tokenId, amount, dataPos, dataSize)
+                    let dataPos, dataLength := decodeArray(3)
+                    checkAcceptance(account, 0, tokenId, amount, dataPos, dataLength)
                 }
-                return(0, 0)
             }
             case 0x2eb2c2d6 /* "safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)" */ {
-                revert (0, 0) // TODO implement
+                let from := decodeAsAddress(0)
+                let to := decodeAsAddress(1)
+                let idsPos, idsLength := decodeArray(2)
+                let amountsPos, amountsLength := decodeArray(3)
+                require(eq(idsLength, amountsLength))
+                batchTransfer(from, to, idsPos, amountsPos, idsLength)
+                if isContract(to) {
+                    let dataPos, dataLength := decodeArray(4)
+                    checkBatchAcceptance(to, from, idsPos, amountsPos, idsLength, dataPos, dataLength)
+                }
             }
             case 0xf242432a /* "safeTransferFrom(address,address,uint256,uint256,bytes)" */ {
-                transferFrom(decodeAsAddress(0), decodeAsAddress(1), decodeAsUint(2), decodeAsUint(3))
-                return (0, 0)
+                let from := decodeAsAddress(0)
+                let to := decodeAsAddress(1)
+                let tokenId := decodeAsUint(2)
+                let amount := decodeAsUint(3)
+                transferFrom(from, to, tokenId, amount)
+                if isContract(to) {
+                    let dataPos, dataSize := decodeArray(4)
+                    checkAcceptance(to, from, tokenId, amount, dataPos, dataSize)
+                }
             }
             case 0xa22cb465 /* "setApprovalForAll(address,bool)" */ {
                 approve(decodeAsAddress(0), decodeAsUint(1))
-                return (0, 0)
             }
             case 0xdd62ed3e /* "supportsInterface(bytes4)" */ {
                 revert (0, 0) // TODO implement
@@ -81,7 +102,6 @@ object "Token" {
             }
 
             function approve(spender, approved) {
-                revertIfZeroAddress(spender)
                 setApproval(caller(), spender, approved)
                 emitApprovalForAll(caller(), spender, approved)
             }
@@ -89,13 +109,25 @@ object "Token" {
             function transferFrom(from, to, tokenId, amount) {
                 require(isApprovedOrOwner(from, caller()))
                 executeTransfer(from, to, tokenId, amount)
+                emitTransferSingle(caller(), from, to, tokenId, amount)
             }
 
             function executeTransfer(from, to, tokenId, amount) {
-                revertIfZeroAddress(to)
                 deductFromBalance(from, tokenId, amount)
                 addToBalance(to, tokenId, amount)
-                emitTransferSingle(caller(), from, to, tokenId, amount)
+            }
+
+            function batchTransfer(from, to, idsPos, amountsPos, tokensLength) {
+                require(isApprovedOrOwner(from, caller()))
+                let bytesLength := mul(tokensLength, 0x20)
+                for { let offset := 0 } lt(offset, bytesLength) { offset := add(offset, 0x20) } {
+                    let tokenId := calldataload(add(idsPos, offset))
+                    let amount := calldataload(add(amountsPos, offset))
+
+                    executeTransfer(from, to, tokenId, amount)
+                }
+
+                // TODO emit transfer batch
             }
 
             function batchMint(account, idsPos, amountsPos, length) {
@@ -105,6 +137,18 @@ object "Token" {
                     let amount := calldataload(add(amountsPos, offset))
 
                     addToBalance(account, tokenId, amount)
+                }
+
+                // TODO emit transfer batch
+            }
+
+            function batchBurn(account, idsPos, amountsPos, length) {
+                let bytesLength := mul(length, 0x20)
+                for { let offset := 0 } lt(offset, bytesLength) { offset := add(offset, 0x20) } {
+                    let tokenId := calldataload(add(idsPos, offset))
+                    let amount := calldataload(add(amountsPos, offset))
+
+                    deductFromBalance(account, tokenId, amount)
                 }
 
                 // TODO emit transfer batch
