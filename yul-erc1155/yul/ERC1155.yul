@@ -22,14 +22,14 @@ object "Token" {
             }
             case 0xb48ab8b6 /* "batchMint(address,uint256[],uint256[],bytes)" */ {
                 require(calledByOwner())
-                let idsPos, idsLastOffset := decodeArray(1, 0x20)
-                let amountsPos, amountsLastOffset := decodeArray(2, 0x20)
-                require(eq(idsLastOffset, amountsLastOffset))
+                let idsPos, idsLength := decodeArray(1)
+                let amountsPos, amountsLength := decodeArray(2)
+                require(eq(idsLength, amountsLength))
                 let account := decodeAsAddress(0)
-                batchMint(account, idsPos, amountsPos, idsLastOffset)
+                batchMint(account, idsPos, amountsPos, idsLength)
                 if isContract(account) {
-                    let bytesPos, bytesLen := decodeArray(3, 1)
-                    checkBatchAcceptance(account, 0, idsPos, amountsPos, idsLastOffset, bytesPos, bytesLen)
+                    let dataPos, dataLength := decodeArray(3)
+                    checkBatchAcceptance(account, 0, idsPos, amountsPos, idsLength, dataPos, dataLength)
                 }
             }
             case 0xf5298aca /* "burn(address,uint256,uint256)" */ {
@@ -38,7 +38,7 @@ object "Token" {
                 return (0, 0)
             }
             case 0xe985e9c5 /* "isApprovedForAll(address,address)" */ {
-                returnUint(isApproved(decodeAsAddress(0), decodeAsAddress(1)))
+                returnUint(isApprovedOrOwner(decodeAsAddress(0), decodeAsAddress(1)))
             }
             case 0x731133e9 /* "mint(address,uint256,uint256,bytes)" */ {
                 require(calledByOwner())
@@ -47,7 +47,7 @@ object "Token" {
                 let amount := decodeAsUint(2)
                 mint(account, tokenId, amount)
                 if isContract(account) {
-                    let dataPos, dataSize := decodeArray(3, 1)
+                    let dataPos, dataSize := decodeArray(3)
                     checkAcceptance(account, 0, tokenId, amount, dataPos, dataSize)
                 }
                 return(0, 0)
@@ -87,7 +87,7 @@ object "Token" {
             }
 
             function transferFrom(from, to, tokenId, amount) {
-                require(isApproved(from, caller()))
+                require(isApprovedOrOwner(from, caller()))
                 executeTransfer(from, to, tokenId, amount)
             }
 
@@ -98,8 +98,9 @@ object "Token" {
                 emitTransferSingle(caller(), from, to, tokenId, amount)
             }
 
-            function batchMint(account, idsPos, amountsPos, lastOffset) {
-                for { let offset := 0 } lt(offset, lastOffset) { offset := add(offset, 0x20) } {
+            function batchMint(account, idsPos, amountsPos, length) {
+                let bytesLength := mul(length, 0x20)
+                for { let offset := 0 } lt(offset, bytesLength) { offset := add(offset, 0x20) } {
                     let tokenId := calldataload(add(idsPos, offset))
                     let amount := calldataload(add(amountsPos, offset))
 
@@ -109,7 +110,7 @@ object "Token" {
                 // TODO emit transfer batch
             }
 
-            function checkAcceptance(account, from, id, value, dataPos, bytesSize) {
+            function checkAcceptance(account, from, id, value, dataPos, dataLength) {
                 let sel := 0xf23a6e6100000000000000000000000000000000000000000000000000000000 // onERC1155Received(address,address,uint256,uint256,bytes)
                 mstore(0, sel)
                 mstore(0x04, caller())
@@ -117,29 +118,30 @@ object "Token" {
                 mstore(0x44, id)
                 mstore(0x64, value)
                 mstore(0x84, 0xa0) // pointer to start of `data`
-                copyDataToMemoryFromPos(dataPos, bytesSize, 1, 0xa4)
-                let inputSize := add(bytesSize, 0xc4) // Space for 4 bytes for selector, 4 static arguments, and one dynamic argument
+                copyDataToMemoryFromPos(dataPos, dataLength, 1, 0xa4)
+                let inputSize := add(dataLength, 0xc4) // Space for 4 bytes for selector, 4 static arguments, and one dynamic argument
                 require(call(gas(), account, 0, 0, inputSize, inputSize, 4))
                 require(eq(mload(inputSize), sel))
             }
 
-            function checkBatchAcceptance(account, from, idsPos, amountsPos, idsLen, bytesPos, bytesLen) {
+            function checkBatchAcceptance(account, from, idsPos, amountsPos, tokensLength, dataPos, dataLength) {
                 let sel := 0xbc197c8100000000000000000000000000000000000000000000000000000000 // onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)
                 mstore(0, sel)
                 mstore(0x04, caller())
                 mstore(0x24, from)
+                let tokensByteSize := mul(tokensLength, 0x20)
                 let idsLoc := 0xa4
-                let amountsLoc := add(0xc4, idsLen)
-                let dataLoc := add(0xe4, mul(idsLen, 2))
+                let amountsLoc := add(0xc4, tokensByteSize)
+                let dataLoc := add(0xe4, mul(tokensByteSize, 2))
                 mstore(0x44, sub(idsLoc, 4)) // pointer to start of `ids`
                 mstore(0x64, sub(amountsLoc, 4)) // pointer to start of `values`
                 mstore(0x84, sub(dataLoc, 4)) // pointer to start of `data`
 
-                copyDataToMemoryFromPos(idsPos, idsLen, 0x20, idsLoc) // copy `ids`
-                copyDataToMemoryFromPos(amountsPos, idsLen, 0x20, amountsLoc) // copy `amounts`
-                copyDataToMemoryFromPos(bytesPos, bytesLen, 1, dataLoc) // copy `bytes`
+                copyDataToMemoryFromPos(idsPos, tokensLength, 0x20, idsLoc) // copy `ids`
+                copyDataToMemoryFromPos(amountsPos, tokensLength, 0x20, amountsLoc) // copy `amounts`
+                copyDataToMemoryFromPos(dataPos, dataLength, 1, dataLoc) // copy `bytes`
 
-                let inputSize := add(0x20, add(dataLoc, bytesLen))
+                let inputSize := add(0x20, add(dataLoc, dataLength))
                 require(call(gas(), account, 0, 0, inputSize, inputSize, 4))
                 require(eq(mload(inputSize), sel))
             }
@@ -162,22 +164,17 @@ object "Token" {
                 }
                 v := calldataload(pos)
             }
-            function decodeArray(offset, elementSize) -> beginPos, lastOffset {
+            function decodeArray(offset) -> beginPos, length {
                 let pos := add(4, decodeAsUint(offset))
-                lastOffset := mul(elementSize, calldataload(pos))
+                length := calldataload(pos)
                 beginPos := add(0x20, pos)
             }
 
             // Copy array-like data to memory
-            function copyDataToMemory(offset, elementSize, destOffset) -> lastOffset {
-                let beginPos
-                    beginPos, lastOffset := decodeArray(offset, elementSize)
-                copyDataToMemoryFromPos(beginPos, lastOffset, elementSize, destOffset)
-            }
-            function copyDataToMemoryFromPos(beginPos, lastOffset, elementSize, destOffset) {
+            function copyDataToMemoryFromPos(beginPos, length, elementSize, destOffset) {
                 let dataStart := add(destOffset, 0x20)
-                calldatacopy(dataStart, beginPos, lastOffset)
-                mstore(destOffset, div(lastOffset, elementSize))
+                calldatacopy(dataStart, beginPos, mul(length, elementSize))
+                mstore(destOffset, length)
             }
 
             /* ---------- calldata encoding functions ---------- */
@@ -231,8 +228,14 @@ object "Token" {
                 require(lte(amount, bal))
                 sstore(offset, sub(bal, amount))
             }
-            function isApproved(account, spender) -> approved {
-                approved := sload(allowanceStorageOffset(account, spender))
+            function isApprovedOrOwner(account, spender) -> approved {
+                switch eq(account, spender)
+                case 1 {
+                    approved := 1
+                }
+                default {
+                    approved := sload(allowanceStorageOffset(account, spender))
+                }
             }
             function setApproval(account, spender, approved) {
                 sstore(allowanceStorageOffset(account, spender), approved)
