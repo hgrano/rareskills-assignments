@@ -18,7 +18,10 @@ object "Token" {
                 returnUint(balanceOf(decodeAsAddress(0), decodeAsUint(1)))
             }
             case 0x4e1273f4 /* "balanceOfBatch(address[],uint256[])" */ {
-                revert (0, 0) // TODO implement
+                let accountsPos, accountsLength := decodeArray(0)
+                let tokenIdsPos, tokenIdsLength := decodeArray(1)
+                require(eq(accountsLength, tokenIdsLength))
+                returnBalanceOfBatch(accountsPos, tokenIdsPos, tokenIdsLength)
             }
             case 0xf6eb127a /* "batchBurn(address,uint256[],uint256[])" */ {
                 require(calledByOwner())
@@ -152,6 +155,21 @@ object "Token" {
                 }
 
                 // TODO emit transfer batch
+            }
+
+            function returnBalanceOfBatch(accountsPos, idsPos, length) {
+                mstore(0, 0x20)
+                mstore(0x20, length)
+
+                let bytesLength := mul(0x20, length)
+                for { let offset := 0 } lt(offset, bytesLength) { offset := add(offset, 0x20) } {
+                    let account := calldataload(add(accountsPos, offset))
+                    let tokenId := calldataload(add(idsPos, offset))
+
+                    mstore(add(0x40, offset), balanceOf(account, tokenId))
+                }
+
+                return (0, add(0x40, bytesLength))
             }
 
             function checkAcceptance(account, from, id, value, dataPos, dataLength) {
@@ -298,9 +316,6 @@ object "Token" {
             }
             function calledByOwner() -> cbo {
                 cbo := eq(owner(), caller())
-            }
-            function revertIfZeroAddress(addr) {
-                require(addr)
             }
             function isContract(addr) -> ic {
                 ic := gt(extcodesize(addr), 0)
