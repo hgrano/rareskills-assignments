@@ -37,3 +37,6 @@
 [submodule "yul-erc1155/lib/openzeppelin-contracts"]
 	path = yul-erc1155/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "gas-optimization/synthetix-optimization/lib/forge-std"]
+	path = gas-optimization/synthetix-optimization/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
