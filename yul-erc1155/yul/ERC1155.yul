@@ -37,6 +37,7 @@ object "Token" {
                 let amountsPos, amountsLength := decodeArray(2)
                 require(eq(idsLength, amountsLength))
                 let account := decodeAsAddress(0)
+                revertIfZeroAddress(account)
                 batchMint(account, idsPos, amountsPos, idsLength)
                 if isContract(account) {
                     let dataPos, dataLength := decodeArray(3)
@@ -53,6 +54,7 @@ object "Token" {
             case 0x731133e9 /* "mint(address,uint256,uint256,bytes)" */ {
                 require(calledByOwner())
                 let account := decodeAsAddress(0)
+                revertIfZeroAddress(account)
                 let tokenId := decodeAsUint(1)
                 let amount := decodeAsUint(2)
                 mint(account, tokenId, amount)
@@ -64,6 +66,7 @@ object "Token" {
             case 0x2eb2c2d6 /* "safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)" */ {
                 let from := decodeAsAddress(0)
                 let to := decodeAsAddress(1)
+                revertIfZeroAddress(to)
                 let idsPos, idsLength := decodeArray(2)
                 let amountsPos, amountsLength := decodeArray(3)
                 require(eq(idsLength, amountsLength))
@@ -76,6 +79,7 @@ object "Token" {
             case 0xf242432a /* "safeTransferFrom(address,address,uint256,uint256,bytes)" */ {
                 let from := decodeAsAddress(0)
                 let to := decodeAsAddress(1)
+                revertIfZeroAddress(to)
                 let tokenId := decodeAsUint(2)
                 let amount := decodeAsUint(3)
                 transferFrom(from, to, tokenId, amount)
@@ -316,6 +320,9 @@ object "Token" {
             }
             function calledByOwner() -> cbo {
                 cbo := eq(owner(), caller())
+            }
+            function revertIfZeroAddress(addr) {
+                require(addr)
             }
             function isContract(addr) -> ic {
                 ic := gt(extcodesize(addr), 0)
