@@ -223,6 +223,7 @@ object "Token" {
                     revert(0, 0)
                 }
             }
+
             function decodeAsUint(offset) -> v {
                 let pos := add(4, mul(offset, 0x20))
                 if lt(calldatasize(), add(pos, 0x20)) {
@@ -230,6 +231,7 @@ object "Token" {
                 }
                 v := calldataload(pos)
             }
+
             function decodeArray(offset) -> beginPos, length {
                 let pos := add(4, decodeAsUint(offset))
                 length := calldataload(pos)
@@ -256,6 +258,7 @@ object "Token" {
                 mstore(0x20, amount)
                 log4(0, 0x40, signatureHash, operator, from, to)
             }
+
             function emitApprovalForAll(account, spender, approved) {
                 let signatureHash := 0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31
                 mstore(0, approved)
@@ -264,12 +267,14 @@ object "Token" {
 
             /* -------- storage layout ---------- */
             function ownerPos() -> p { p := 0 }
+
             function accountToStorageOffset(account, tokenId) -> offset {
                 mstore(0, 0)
                 mstore(0x20, account)
                 mstore(0x40, tokenId)
                 offset := keccak256(0, 0x60)
             }
+
             function allowanceStorageOffset(account, spender) -> offset {
                 mstore(0, 1)
                 mstore(0x20, account)
@@ -281,19 +286,23 @@ object "Token" {
             function owner() -> o {
                 o := sload(ownerPos())
             }
+
             function balanceOf(account, tokenId) -> bal {
                 bal := sload(accountToStorageOffset(account, tokenId))
             }
+
             function addToBalance(account, tokenId, amount) {
                 let offset := accountToStorageOffset(account, tokenId)
                 sstore(offset, safeAdd(sload(offset), amount))
             }
+
             function deductFromBalance(account, tokenId, amount) {
                 let offset := accountToStorageOffset(account, tokenId)
                 let bal := sload(offset)
                 require(lte(amount, bal))
                 sstore(offset, sub(bal, amount))
             }
+
             function isApprovedOrOwner(account, spender) -> approved {
                 switch eq(account, spender)
                 case 1 {
@@ -303,6 +312,7 @@ object "Token" {
                     approved := sload(allowanceStorageOffset(account, spender))
                 }
             }
+
             function setApproval(account, spender, approved) {
                 sstore(allowanceStorageOffset(account, spender), approved)
             }
@@ -311,22 +321,28 @@ object "Token" {
             function lte(a, b) -> r {
                 r := iszero(gt(a, b))
             }
+
             function gte(a, b) -> r {
                 r := iszero(lt(a, b))
             }
+
             function safeAdd(a, b) -> r {
                 r := add(a, b)
                 if or(lt(r, a), lt(r, b)) { revert(0, 0) }
             }
+
             function calledByOwner() -> cbo {
                 cbo := eq(owner(), caller())
             }
+
             function revertIfZeroAddress(addr) {
                 require(addr)
             }
+
             function isContract(addr) -> ic {
                 ic := gt(extcodesize(addr), 0)
             }
+
             function require(condition) {
                 if iszero(condition) { revert(0, 0) }
             }
