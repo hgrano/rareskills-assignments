@@ -184,7 +184,7 @@ object "Token" {
                 mstore(0x44, id)
                 mstore(0x64, value)
                 mstore(0x84, 0xa0) // pointer to start of `data`
-                copyDataToMemoryFromPos(dataPos, dataLength, 1, 0xa4)
+                copyCallDataArray(0xa4, dataPos, dataLength, 1)
                 let inputSize := add(dataLength, 0xc4) // Space for 4 bytes for selector, 4 static arguments, and one dynamic argument
                 require(call(gas(), account, 0, 0, inputSize, inputSize, 4))
                 require(eq(mload(inputSize), sel))
@@ -203,9 +203,9 @@ object "Token" {
                 mstore(0x64, sub(amountsLoc, 4)) // pointer to start of `values`
                 mstore(0x84, sub(dataLoc, 4)) // pointer to start of `data`
 
-                copyDataToMemoryFromPos(idsPos, tokensLength, 0x20, idsLoc) // copy `ids`
-                copyDataToMemoryFromPos(amountsPos, tokensLength, 0x20, amountsLoc) // copy `amounts`
-                copyDataToMemoryFromPos(dataPos, dataLength, 1, dataLoc) // copy `bytes`
+                copyCallDataArray(idsLoc, idsPos, tokensLength, 0x20) // copy `ids`
+                copyCallDataArray(amountsLoc, amountsPos, tokensLength, 0x20) // copy `amounts`
+                copyCallDataArray(dataLoc, dataPos, dataLength, 1) // copy `bytes`
 
                 let inputSize := add(0x20, add(dataLoc, dataLength))
                 require(call(gas(), account, 0, 0, inputSize, inputSize, 4))
@@ -237,7 +237,7 @@ object "Token" {
             }
 
             // Copy array-like data to memory
-            function copyDataToMemoryFromPos(beginPos, length, elementSize, destOffset) {
+            function copyCallDataArray(destOffset, beginPos, length, elementSize) {
                 let dataStart := add(destOffset, 0x20)
                 calldatacopy(dataStart, beginPos, mul(length, elementSize))
                 mstore(destOffset, length)
