@@ -39,16 +39,30 @@ abstract contract StakingRewardsTest is Test {
     }
 
     function testStake2InSamePeriod() public {
-        uint256 startTimeStamp = block.timestamp;
         stakingRewards.stake(10 ether);
-        vm.warp(startTimeStamp + 3 days);
+        vm.warp(block.timestamp + 3 days);
         stakingRewards.stake(10 ether);
     }
 
     function testStake2InDifferentPeriods() public {
-        uint256 startTimeStamp = block.timestamp;
         stakingRewards.stake(10 ether);
-        vm.warp(startTimeStamp + 10 days);
+        vm.warp(block.timestamp + 10 days);
         stakingRewards.stake(10 ether);
+    }
+
+    function testWithdrawAll() public {
+        stakingRewards.stake(10 ether);
+        stakingRewards.withdraw(10 ether);
+    }
+
+    function testWithdrawPartial() public {
+        stakingRewards.stake(10 ether);
+        stakingRewards.withdraw(5 ether);
+    }
+
+    function testGetReward() public {
+        stakingRewards.stake(10 ether);
+        vm.warp(block.timestamp + 10 days);
+        stakingRewards.getReward();
     }
 }

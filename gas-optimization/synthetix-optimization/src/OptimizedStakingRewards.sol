@@ -10,17 +10,19 @@ import "./RewardsDistributionRecipient.sol";
 import "./Pausable.sol";
 
 // https://docs.synthetix.io/contracts/source/contracts/stakingrewards
-contract OptimizedStakingRewards is IStakingRewards, RewardsDistributionRecipient, ReentrancyGuard, Pausable {
+contract OptimizedStakingRewards is IStakingRewards, RewardsDistributionRecipient, Pausable {
     using SafeERC20 for IERC20;
 
     /* ========== STATE VARIABLES ========== */
 
     IERC20 public rewardsToken;
     IERC20 public stakingToken;
-    uint256 public periodFinish = 0;
-    uint256 public rewardRate = 0;
-    uint256 public rewardsDuration = 7 days;
-    uint256 public lastUpdateTime;
+
+    uint152 public rewardRate = 0; // Max value is approx. 5.7 * 10**27 tokens per second (assuming 18 decimals)
+    uint24 public rewardsDuration = 7 days; // Max value is approx. 194 days
+    uint40 public periodFinish = 0; // Max value is approx. 34,800 years
+    uint40 public lastUpdateTime; // Max value is approx. 34,800 years
+
     uint256 public rewardPerTokenStored;
 
     mapping(address => uint256) public userRewardPerTokenPaid;
@@ -53,7 +55,8 @@ contract OptimizedStakingRewards is IStakingRewards, RewardsDistributionRecipien
     }
 
     function lastTimeRewardApplicable() public view returns (uint256) {
-        return block.timestamp < periodFinish ? block.timestamp : periodFinish;
+        uint256 periodFinish_ = uint256(periodFinish);
+        return block.timestamp < periodFinish_ ? block.timestamp : periodFinish_;
     }
 
     function rewardsDistribution() external view returns (address) {
@@ -80,7 +83,7 @@ contract OptimizedStakingRewards is IStakingRewards, RewardsDistributionRecipien
 
     /* ========== MUTATIVE FUNCTIONS ========== */
 
-    function stake(uint256 amount) external notPaused updateReward(msg.sender) { // nonReentrant modifier not needed if we do use trusted tokens
+    function stake(uint256 amount) external notPaused updateReward(msg.sender) { // nonReentrant modifier not needed if we use trusted ERC20 tokens
         require(amount > 0, "Cannot stake 0");
         stakingToken.safeTransferFrom(msg.sender, address(this), amount);
         unchecked { // msg.sender cannot own more than total supply of the staking token, so unchecked is safe
@@ -90,7 +93,7 @@ contract OptimizedStakingRewards is IStakingRewards, RewardsDistributionRecipien
         emit Staked(msg.sender, amount);
     }
 
-    function withdraw(uint256 amount) public nonReentrant updateReward(msg.sender) {
+    function withdraw(uint256 amount) public updateReward(msg.sender) { // nonReentrant modifier not needed if we use trusted ERC20 tokens
         require(amount > 0, "Cannot withdraw 0");
         _totalSupply = _totalSupply - amount;
         _balances[msg.sender] = _balances[msg.sender] - amount;
@@ -98,7 +101,7 @@ contract OptimizedStakingRewards is IStakingRewards, RewardsDistributionRecipien
         emit Withdrawn(msg.sender, amount);
     }
 
-    function getReward() public nonReentrant updateReward(msg.sender) {
+    function getReward() public updateReward(msg.sender) { // nonReentrant modifier not needed if we use trusted ERC20 tokens
         uint256 reward = rewards[msg.sender];
         if (reward > 0) {
             rewards[msg.sender] = 0;
@@ -115,12 +118,13 @@ contract OptimizedStakingRewards is IStakingRewards, RewardsDistributionRecipien
     /* ========== RESTRICTED FUNCTIONS ========== */
 
     function notifyRewardAmount(uint256 reward) external override onlyRewardsDistribution updateReward(address(0)) {
+        require(reward <= type(uint152).max, "Provided reward exceeds 152 bits");
         if (block.timestamp >= periodFinish) {
-            rewardRate = reward / rewardsDuration;
+            rewardRate = uint152(reward) / uint152(rewardsDuration);
         } else {
-            uint256 remaining = periodFinish - block.timestamp;
-            uint256 leftover = remaining * rewardRate;
-            rewardRate = (reward + leftover) / rewardsDuration;
+            uint256 remaining = uint256(periodFinish) - block.timestamp; // remaining < 2**40
+            uint256 leftover = remaining * uint256(rewardRate); // leftover < 2 ** 40 * 2 ** 152 = 2 ** 192
+            rewardRate = uint152((reward + leftover) / rewardsDuration);
         }
 
         // Ensure the provided reward amount is not more than the balance in the contract.
@@ -130,8 +134,8 @@ contract OptimizedStakingRewards is IStakingRewards, RewardsDistributionRecipien
         uint balance = rewardsToken.balanceOf(address(this));
         require(rewardRate <= balance / rewardsDuration, "Provided reward too high");
 
-        lastUpdateTime = block.timestamp;
-        periodFinish = block.timestamp + rewardsDuration;
+        lastUpdateTime = uint40(block.timestamp);
+        periodFinish = uint40(block.timestamp + rewardsDuration);
         emit RewardAdded(reward);
     }
 
@@ -142,7 +146,7 @@ contract OptimizedStakingRewards is IStakingRewards, RewardsDistributionRecipien
         emit Recovered(tokenAddress, tokenAmount);
     }
 
-    function setRewardsDuration(uint256 _rewardsDuration) external onlyOwner {
+    function setRewardsDuration(uint24 _rewardsDuration) external onlyOwner {
         require(
             block.timestamp > periodFinish,
             "Previous rewards period must be complete before changing the duration for the new period"
@@ -155,7 +159,7 @@ contract OptimizedStakingRewards is IStakingRewards, RewardsDistributionRecipien
 
     modifier updateReward(address account) {
         rewardPerTokenStored = rewardPerToken();
-        lastUpdateTime = lastTimeRewardApplicable();
+        lastUpdateTime = uint40(lastTimeRewardApplicable());
         if (account != address(0)) {
             rewards[account] = earned(account);
             userRewardPerTokenPaid[account] = rewardPerTokenStored;
