@@ -43,3 +43,6 @@
 [submodule "gas-optimization/synthetix-optimization/lib/openzeppelin-contracts"]
 	path = gas-optimization/synthetix-optimization/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "gas-optimization/trader-joe-optimization/lib/forge-std"]
+	path = gas-optimization/trader-joe-optimization/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
