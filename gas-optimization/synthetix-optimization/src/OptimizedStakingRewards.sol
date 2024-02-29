@@ -15,8 +15,8 @@ contract OptimizedStakingRewards is IStakingRewards, RewardsDistributionRecipien
 
     /* ========== STATE VARIABLES ========== */
 
-    IERC20 public rewardsToken;
-    IERC20 public stakingToken;
+    IERC20 public immutable rewardsToken;
+    IERC20 public immutable stakingToken;
 
     uint152 public rewardRate = 0; // Max value is approx. 5.7 * 10**27 tokens per second (assuming 18 decimals)
     uint24 public rewardsDuration = 7 days; // Max value is approx. 194 days
