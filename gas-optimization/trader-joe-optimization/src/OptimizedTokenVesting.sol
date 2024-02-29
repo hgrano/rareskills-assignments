@@ -122,11 +122,12 @@ contract OptimizedTokenVesting is Ownable, ITokenVesting {
      * @param token ERC20 token which is being vested
      */
     function release(IERC20 token) public {
-        uint256 unreleased = _releasableAmount(token);
+        uint256 releasedForToken = _released[address(token)]; // cache variable
+        uint256 unreleased = _releasableAmount(token, releasedForToken);
 
         require(unreleased > 0, "TokenVesting: no tokens are due");
 
-        _released[address(token)] = _released[address(token)] + unreleased;
+        _released[address(token)] = releasedForToken + unreleased;
 
         token.safeTransfer(_beneficiary, unreleased);
 
@@ -144,7 +145,7 @@ contract OptimizedTokenVesting is Ownable, ITokenVesting {
 
         uint256 balance = token.balanceOf(address(this));
 
-        uint256 unreleased = _releasableAmount(token);
+        uint256 unreleased = _releasableAmount(token, _released[address(token)]);
         uint256 refund = balance - unreleased;
 
         _revoked[address(token)] = true;
@@ -177,17 +178,17 @@ contract OptimizedTokenVesting is Ownable, ITokenVesting {
      * @dev Calculates the amount that has already vested but hasn't been released yet.
      * @param token ERC20 token which is being vested
      */
-    function _releasableAmount(IERC20 token) private view returns (uint256) {
-        return _vestedAmount(token) - _released[address(token)];
+    function _releasableAmount(IERC20 token, uint256 releasedForToken) private view returns (uint256) {
+        return _vestedAmount(token, releasedForToken) - releasedForToken;
     }
 
     /**
      * @dev Calculates the amount that has already vested.
      * @param token ERC20 token which is being vested
      */
-    function _vestedAmount(IERC20 token) private view returns (uint256) {
+    function _vestedAmount(IERC20 token, uint256 releasedForToken) private view returns (uint256) {
         uint256 currentBalance = token.balanceOf(address(this));
-        uint256 totalBalance = currentBalance + _released[address(token)];
+        uint256 totalBalance = currentBalance + releasedForToken;
 
         if (block.timestamp < _cliff) {
             return 0;
