@@ -30,6 +30,7 @@ contract OptimizedTokenVesting is Ownable, ITokenVesting {
     // Durations and timestamps are expressed in UNIX time, the same units as block.timestamp.
     uint256 private immutable _cliff;
     uint256 private immutable _start;
+    uint256 private immutable _end;
     uint256 private immutable _duration;
 
     bool private immutable _revocable;
@@ -58,6 +59,7 @@ contract OptimizedTokenVesting is Ownable, ITokenVesting {
         // solhint-disable-next-line max-line-length
         require(cliffDuration_ <= duration_, "TokenVesting: cliff is longer than duration");
         require(duration_ > 0, "TokenVesting: duration is 0");
+        require(start_ >= block.timestamp, "TokenVesting: start is before current time");
         // solhint-disable-next-line max-line-length
         require(start_ + duration_ > block.timestamp, "TokenVesting: final time is before current time");
 
@@ -66,6 +68,7 @@ contract OptimizedTokenVesting is Ownable, ITokenVesting {
         _duration = duration_;
         _cliff = start_ + cliffDuration_;
         _start = start_;
+        _end = start_ + duration_;
     }
 
     /**
@@ -127,7 +130,9 @@ contract OptimizedTokenVesting is Ownable, ITokenVesting {
 
         require(unreleased > 0, "TokenVesting: no tokens are due");
 
-        _released[address(token)] = releasedForToken + unreleased;
+        unchecked { // Cannot exceed ERC20 supply
+            _released[address(token)] = releasedForToken + unreleased;
+        }
 
         token.safeTransfer(_beneficiary, unreleased);
 
@@ -188,14 +193,25 @@ contract OptimizedTokenVesting is Ownable, ITokenVesting {
      */
     function _vestedAmount(IERC20 token, uint256 releasedForToken) private view returns (uint256) {
         uint256 currentBalance = token.balanceOf(address(this));
-        uint256 totalBalance = currentBalance + releasedForToken;
+        uint256 totalBalance;
+        unchecked { // Cannot exceed ERC20 supply
+            totalBalance = currentBalance + releasedForToken;
+        }
 
         if (block.timestamp < _cliff) {
             return 0;
-        } else if (block.timestamp >= _start + _duration || _revoked[address(token)]) {
+        } else if (block.timestamp >= _end || _revoked[address(token)]) {
             return totalBalance;
         } else {
-            return (totalBalance * (block.timestamp - _start)) / _duration;
+            uint256 elapsed;
+            unchecked { // block.timestamp is monotonically increasing
+                elapsed = block.timestamp - _start;
+            }
+            uint256 numerator = totalBalance * elapsed;
+
+            unchecked { // duration is non-zero
+                return numerator / _duration;
+            }
         }
     }
 }
