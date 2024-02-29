@@ -12,7 +12,7 @@ import "./libraries/SafeERC20.sol";
  * typical vesting scheme, with a cliff and vesting period. Optionally revocable by the
  * owner.
  */
-contract TokenVesting is Ownable, ITokenVesting {
+contract OptimizedTokenVesting is Ownable, ITokenVesting {
     // The vesting schedule is time-based (i.e. using block timestamps as opposed to e.g. block numbers), and is
     // therefore sensitive to timestamp manipulation (which is something miners can do, to a certain degree). Therefore,
     // it is recommended to avoid using short time durations (less than a minute). Typical vesting schemes, with a
@@ -25,14 +25,14 @@ contract TokenVesting is Ownable, ITokenVesting {
     event TokenVestingRevoked(address token);
 
     // beneficiary of tokens after they are released
-    address private _beneficiary;
+    address private immutable _beneficiary;
 
     // Durations and timestamps are expressed in UNIX time, the same units as block.timestamp.
-    uint256 private _cliff;
-    uint256 private _start;
-    uint256 private _duration;
+    uint256 private immutable _cliff;
+    uint256 private immutable _start;
+    uint256 private immutable _duration;
 
-    bool private _revocable;
+    bool private immutable _revocable;
 
     mapping(address => uint256) private _released;
     mapping(address => bool) private _revoked;
