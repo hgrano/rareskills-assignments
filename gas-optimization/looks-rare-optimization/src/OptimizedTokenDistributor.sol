@@ -8,11 +8,11 @@ import {ILooksRareToken} from "./interfaces/ILooksRareToken.sol";
 import {ITokenDistributor} from "./interfaces/ITokenDistributor.sol";
 
 /**
- * @title TokenDistributor
+ * @title OptimizedTokenDistributor
  * @notice It handles the distribution of LOOKS token.
  * It auto-adjusts block rewards over a set number of periods.
  */
-contract TokenDistributor is ReentrancyGuard, ITokenDistributor {
+contract OptimizedTokenDistributor is ReentrancyGuard, ITokenDistributor {
     using SafeERC20 for IERC20;
     using SafeERC20 for ILooksRareToken;
 
