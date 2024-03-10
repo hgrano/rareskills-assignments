@@ -34,12 +34,16 @@ abstract contract StakingRewardsTest is Test {
     }
 
     function testStake2InSameBlock() public {
+        vm.pauseGasMetering();
         stakingRewards.stake(10 ether);
+        vm.resumeGasMetering();
         stakingRewards.stake(10 ether);
     }
 
     function testStake2InSamePeriod() public {
+        vm.pauseGasMetering();
         stakingRewards.stake(10 ether);
+        vm.resumeGasMetering();
         vm.warp(block.timestamp + 3 days);
         stakingRewards.stake(10 ether);
     }
