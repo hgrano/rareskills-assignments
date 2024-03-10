@@ -17,14 +17,15 @@ contract OptimizedTokenDistributor is ReentrancyGuard, ITokenDistributor {
     using SafeERC20 for ILooksRareToken;
 
     struct StakingPeriod {
-        uint256 rewardPerBlockForStaking;
-        uint256 rewardPerBlockForOthers;
-        uint256 periodLengthInBlock;
+        // Single slot
+        uint32 periodLengthInBlock; // Given 12 seconds per block, this can go up to a maximum of ~1600 years
+        uint112 rewardPerBlockForOthers;
+        uint112 rewardPerBlockForStaking;
     }
 
     struct UserInfo {
-        uint256 amount; // Amount of staked tokens provided by user
-        uint256 rewardDebt; // Reward debt
+        uint128 amount; // Amount of staked tokens provided by user
+        uint128 rewardDebt; // Reward debt
     }
 
     // Precision factor for calculating rewards
@@ -35,31 +36,41 @@ contract OptimizedTokenDistributor is ReentrancyGuard, ITokenDistributor {
     address public immutable tokenSplitter;
 
     // Number of reward periods
-    uint256 public immutable NUMBER_PERIODS;
+    uint16 public immutable NUMBER_PERIODS; // Max of ~65,000 periods
 
     // Block number when rewards start
-    uint256 public immutable START_BLOCK;
+    uint40 public immutable START_BLOCK;
 
+    // BEGIN SLOT
     // Accumulated tokens per share
-    uint256 public accTokenPerShare;
+    // Assuming the token has 18 decimal places, coupled with the 12 decimal places for the PRECISION_FACTOR we can
+    // store a max value of ~1.46 * 10**18 tokens in this variable
+    uint160 public accTokenPerShare; 
 
     // Current phase for rewards
-    uint256 public currentPhase;
+    uint16 public currentPhase; // Max of ~65,000
 
     // Block number when rewards end
-    uint256 public endBlock;
+    uint40 public endBlock;
 
     // Block number of the last update
-    uint256 public lastRewardBlock;
+    uint40 public lastRewardBlock;
+    // END SLOT
 
+    // BEGIN SLOT
     // Tokens distributed per block for other purposes (team + treasury + trading rewards)
-    uint256 public rewardPerBlockForOthers;
+    // Assuming the token has 18 decimal places, then this variable can store at most ~5.2 * 10**18 tokens
+    uint112 public rewardPerBlockForOthers;
 
     // Tokens distributed per block for staking
-    uint256 public rewardPerBlockForStaking;
+    // Assuming the token has 18 decimal places, then this variable can store at most ~5.2 * 10**18 tokens
+    uint112 public rewardPerBlockForStaking;
+    // END SLOT
 
+    // BEGIN SLOT
     // Total amount staked
     uint256 public totalAmountStaked;
+    // END SLOT
 
     mapping(uint256 => StakingPeriod) public stakingPeriod;
 
@@ -88,11 +99,11 @@ contract OptimizedTokenDistributor is ReentrancyGuard, ITokenDistributor {
     constructor(
         address _looksRareToken,
         address _tokenSplitter,
-        uint256 _startBlock,
-        uint256[] memory _rewardsPerBlockForStaking,
-        uint256[] memory _rewardsPerBlockForOthers,
-        uint256[] memory _periodLengthesInBlocks,
-        uint256 _numberPeriods
+        uint40 _startBlock,
+        uint112[] memory _rewardsPerBlockForStaking,
+        uint112[] memory _rewardsPerBlockForOthers,
+        uint32[] memory _periodLengthesInBlocks,
+        uint16 _numberPeriods
     ) {
         require(
             (_periodLengthesInBlocks.length == _numberPeriods) &&
@@ -141,6 +152,8 @@ contract OptimizedTokenDistributor is ReentrancyGuard, ITokenDistributor {
      * @param amount amount to deposit (in LOOKS)
      */
     function deposit(uint256 amount) external nonReentrant {
+        // To make the tests compile `uint256` is used as the parameter type so it is the same signature as the
+        // original contract, but in practice it should be changed to uint128
         require(amount > 0, "Deposit: Amount must be > 0");
 
         // Update pool information
@@ -150,17 +163,24 @@ contract OptimizedTokenDistributor is ReentrancyGuard, ITokenDistributor {
         looksRareToken.safeTransferFrom(msg.sender, address(this), amount);
 
         uint256 pendingRewards;
+        uint256 userAmount = userInfo[msg.sender].amount;
+        uint256 accTokenPerShare_ = accTokenPerShare;
 
         // If not new deposit, calculate pending rewards (for auto-compounding)
-        if (userInfo[msg.sender].amount > 0) {
+        if (userAmount > 0) {
             pendingRewards =
-                ((userInfo[msg.sender].amount * accTokenPerShare) / PRECISION_FACTOR) -
-                userInfo[msg.sender].rewardDebt;
+                ((userAmount * accTokenPerShare_) / PRECISION_FACTOR) - userInfo[msg.sender].rewardDebt;
         }
 
+        uint256 newAmount = userAmount + amount + pendingRewards;
+        require(newAmount <= type(uint128).max, "Deposit: New amount must be within range of uint128");
+
         // Adjust user information
-        userInfo[msg.sender].amount += (amount + pendingRewards);
-        userInfo[msg.sender].rewardDebt = (userInfo[msg.sender].amount * accTokenPerShare) / PRECISION_FACTOR;
+        userInfo[msg.sender].amount = uint128(newAmount);
+
+        uint256 newRewardDebt = (newAmount * accTokenPerShare_) / PRECISION_FACTOR;
+        require(newRewardDebt <= type(uint128).max, "Deposit: New reward debt must be within range of uint128");
+        userInfo[msg.sender].rewardDebt = uint128(newRewardDebt);
 
         // Increase totalAmountStaked
         totalAmountStaked += (amount + pendingRewards);
@@ -175,9 +195,12 @@ contract OptimizedTokenDistributor is ReentrancyGuard, ITokenDistributor {
         // Update pool information
         _updatePool();
 
+        uint256 userAmount = uint256(userInfo[msg.sender].amount);
+        uint256 accTokenPerShare_ = uint256(accTokenPerShare);
+
         // Calculate pending rewards
-        uint256 pendingRewards = ((userInfo[msg.sender].amount * accTokenPerShare) / PRECISION_FACTOR) -
-            userInfo[msg.sender].rewardDebt;
+        uint256 pendingRewards = ((userAmount * accTokenPerShare_) / PRECISION_FACTOR) -
+            uint256(userInfo[msg.sender].rewardDebt);
 
         // Return if no pending rewards
         if (pendingRewards == 0) {
@@ -185,14 +208,22 @@ contract OptimizedTokenDistributor is ReentrancyGuard, ITokenDistributor {
             return;
         }
 
+        uint256 newAmount = userAmount + pendingRewards;
+        require(newAmount <= type(uint128).max, "harvestAndCompound: New amount must be within range of uint128");
+
         // Adjust user amount for pending rewards
-        userInfo[msg.sender].amount += pendingRewards;
+        userInfo[msg.sender].amount = uint128(newAmount);
 
         // Adjust totalAmountStaked
         totalAmountStaked += pendingRewards;
 
         // Recalculate reward debt based on new user amount
-        userInfo[msg.sender].rewardDebt = (userInfo[msg.sender].amount * accTokenPerShare) / PRECISION_FACTOR;
+        uint256 newRewardDebt = (newAmount * accTokenPerShare_) / PRECISION_FACTOR;
+        require(
+            newRewardDebt <= type(uint128).max,
+            "harvestAndCompound: New reward debt must be within range of uint128"
+        );
+        userInfo[msg.sender].rewardDebt = uint128(newRewardDebt);
 
         emit Compound(msg.sender, pendingRewards);
     }
@@ -209,21 +240,28 @@ contract OptimizedTokenDistributor is ReentrancyGuard, ITokenDistributor {
      * @param amount amount to withdraw
      */
     function withdraw(uint256 amount) external nonReentrant {
+        uint256 userAmount = userInfo[msg.sender].amount;
         require(
-            (userInfo[msg.sender].amount >= amount) && (amount > 0),
+            (userAmount >= amount) && (amount > 0),
             "Withdraw: Amount must be > 0 or lower than user balance"
         );
 
         // Update pool
         _updatePool();
 
+        uint256 accTokenPerShare_ = accTokenPerShare;
+
         // Calculate pending rewards
-        uint256 pendingRewards = ((userInfo[msg.sender].amount * accTokenPerShare) / PRECISION_FACTOR) -
+        uint256 pendingRewards = ((userAmount * accTokenPerShare_) / PRECISION_FACTOR) -
             userInfo[msg.sender].rewardDebt;
 
         // Adjust user information
-        userInfo[msg.sender].amount = userInfo[msg.sender].amount + pendingRewards - amount;
-        userInfo[msg.sender].rewardDebt = (userInfo[msg.sender].amount * accTokenPerShare) / PRECISION_FACTOR;
+        uint256 newAmount = userAmount + pendingRewards - amount;
+        require(newAmount <= type(uint128).max, "withdraw: new amount must be within range of uint128");
+        userInfo[msg.sender].amount = uint128(newAmount);
+        uint256 newRewardDebt = (newAmount * accTokenPerShare_) / PRECISION_FACTOR;
+        require(newRewardDebt <= type(uint128).max, "withdraw: new reward debt must be within range of uint128");
+        userInfo[msg.sender].rewardDebt = uint128(newRewardDebt);
 
         // Adjust total amount staked
         totalAmountStaked = totalAmountStaked + pendingRewards - amount;
@@ -238,23 +276,23 @@ contract OptimizedTokenDistributor is ReentrancyGuard, ITokenDistributor {
      * @notice Withdraw all staked tokens and collect tokens
      */
     function withdrawAll() external nonReentrant {
-        require(userInfo[msg.sender].amount > 0, "Withdraw: Amount must be > 0");
+        uint256 userAmount = userInfo[msg.sender].amount;
+        require(userAmount > 0, "Withdraw: Amount must be > 0");
 
         // Update pool
         _updatePool();
 
         // Calculate pending rewards and amount to transfer (to the sender)
-        uint256 pendingRewards = ((userInfo[msg.sender].amount * accTokenPerShare) / PRECISION_FACTOR) -
+        uint256 pendingRewards = ((userAmount * accTokenPerShare) / PRECISION_FACTOR) -
             userInfo[msg.sender].rewardDebt;
 
-        uint256 amountToTransfer = userInfo[msg.sender].amount + pendingRewards;
+        uint256 amountToTransfer = userAmount + pendingRewards;
 
         // Adjust total amount staked
-        totalAmountStaked = totalAmountStaked - userInfo[msg.sender].amount;
+        totalAmountStaked = totalAmountStaked - userAmount;
 
         // Adjust user information
-        userInfo[msg.sender].amount = 0;
-        userInfo[msg.sender].rewardDebt = 0;
+        delete userInfo[msg.sender];
 
         // Transfer LOOKS tokens to the sender
         looksRareToken.safeTransfer(msg.sender, amountToTransfer);
@@ -318,7 +356,7 @@ contract OptimizedTokenDistributor is ReentrancyGuard, ITokenDistributor {
         }
 
         if (totalAmountStaked == 0) {
-            lastRewardBlock = block.number;
+            lastRewardBlock = uint40(block.number);
             return;
         }
 
@@ -352,7 +390,13 @@ contract OptimizedTokenDistributor is ReentrancyGuard, ITokenDistributor {
             // It allows protection against potential issues to prevent funds from being locked
             bool mintStatus = looksRareToken.mint(address(this), tokenRewardForStaking);
             if (mintStatus) {
-                accTokenPerShare = accTokenPerShare + ((tokenRewardForStaking * PRECISION_FACTOR) / totalAmountStaked);
+                uint256 newAccTokenPerShare = accTokenPerShare +
+                    ((tokenRewardForStaking * PRECISION_FACTOR) / totalAmountStaked);
+                if (newAccTokenPerShare > type(uint160).max) {
+                    accTokenPerShare = type(uint160).max;
+                } else {
+                    accTokenPerShare = uint160(newAccTokenPerShare);
+                }
             }
 
             looksRareToken.mint(tokenSplitter, tokenRewardForOthers);
@@ -360,7 +404,7 @@ contract OptimizedTokenDistributor is ReentrancyGuard, ITokenDistributor {
 
         // Update last reward block only if it wasn't updated after or at the end block
         if (lastRewardBlock <= endBlock) {
-            lastRewardBlock = block.number;
+            lastRewardBlock = uint40(block.number);
         }
     }
 

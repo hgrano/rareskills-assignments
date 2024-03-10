@@ -20,7 +20,7 @@ abstract contract TokenDistributorTest is Test {
     function setUp() public {
         looksRareToken = new LooksRareToken(address(this), 1000 ether, 2000 ether);
         tokenSplitter = address(1);
-        startBlock = block.number + 1;
+        startBlock = uint40(block.number) + 1;
         rewardsPerBlockForStaking.push(200 ether);
         rewardsPerBlockForStaking.push(75 ether);
         rewardsPerBlockForOthers.push(50 ether);
