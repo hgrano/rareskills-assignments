@@ -56,14 +56,15 @@ abstract contract TokenDistributorTest is Test {
         vm.pauseGasMetering();
         tokenDistributor.deposit(10 ether);
         vm.resumeGasMetering();
+        vm.roll(block.number + 1);
         tokenDistributor.deposit(10 ether);
     }
 
     function testSecondDepositInNextPhase() public {
         vm.pauseGasMetering();
         tokenDistributor.deposit(10 ether);
-        vm.roll(block.number + periodLengthesInBlocks[0] + 1);
         vm.resumeGasMetering();
+        vm.roll(block.number + periodLengthesInBlocks[0] + 1);
         tokenDistributor.deposit(10 ether);
     }
 
