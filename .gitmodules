@@ -55,3 +55,6 @@
 [submodule "gas-optimization/looks-rare-optimization/lib/openzeppelin-contracts"]
 	path = gas-optimization/looks-rare-optimization/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "gas-optimization/erc721-staking/lib/forge-std"]
+	path = gas-optimization/erc721-staking/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
