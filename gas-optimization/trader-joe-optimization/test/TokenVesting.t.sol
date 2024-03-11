@@ -35,7 +35,7 @@ abstract contract TokenVestingTest is Test {
         erc20 = new MockERC20(1000 ether, address(this));
     }
 
-    function testReleaseAfterCliffButBeforeEnd() public {
+    function testReleaseAfterCliffButBeforeEnd1x() public {
         vm.warp(start + cliffDuration);
         uint256 amount = 10 ether;
         erc20.transfer(address(tokenVesting), amount);
@@ -48,19 +48,40 @@ abstract contract TokenVestingTest is Test {
         vm.warp(start + cliffDuration);
         uint256 amount = 10 ether;
         erc20.transfer(address(tokenVesting), amount);
+        vm.pauseGasMetering();
         tokenVesting.release(erc20); // released amount from zero to non-zero
+        vm.resumeGasMetering();
+
         // Sanity check we are hitting the right code paths
         uint256 expectedInitialRelease = (amount * cliffDuration) / duration;
         assertEq(erc20.balanceOf(beneficiary), expectedInitialRelease);
+
         vm.warp(start + cliffDuration + 1 days);
         tokenVesting.release(erc20); // released amount from non-zero to non-zero
+
+        // Sanity check
         assertEq(erc20.balanceOf(beneficiary), expectedInitialRelease + (amount * 1 days) / duration);
     }
 
-    function testReleaseAfterEnd() public {
+    function testReleaseAfterEnd1x() public {
         vm.warp(start + duration);
         uint256 amount = 10 ether;
         erc20.transfer(address(tokenVesting), amount);
+        tokenVesting.release(erc20);
+        // Sanity check we are hitting the right code path
+        assertEq(erc20.balanceOf(beneficiary), amount);
+    }
+
+    function testReleaseAfterEnd2x() public {
+        vm.warp(start + cliffDuration);
+        uint256 amount = 10 ether;
+        erc20.transfer(address(tokenVesting), amount / 2);
+        vm.pauseGasMetering();
+        tokenVesting.release(erc20);
+        vm.resumeGasMetering();
+
+        vm.warp(start + duration);
+        erc20.transfer(address(tokenVesting), amount / 2);
         tokenVesting.release(erc20);
         // Sanity check we are hitting the right code path
         assertEq(erc20.balanceOf(beneficiary), amount);
