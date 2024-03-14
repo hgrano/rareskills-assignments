@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 import "./interface/IStaking721.sol";
 
-abstract contract Staking721 is ReentrancyGuard, IStaking721 {
+abstract contract OptimizedStaking721 is ReentrancyGuard, IStaking721 {
     /*///////////////////////////////////////////////////////////////
                             State variables / Mappings
     //////////////////////////////////////////////////////////////*/
