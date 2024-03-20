@@ -14,17 +14,18 @@ abstract contract Staking721Test is Test, IERC721Receiver {
     ERC721Impl public erc721; // Staking token
     ERC20Impl public erc20; // Rewards token
     uint256 initialERC20Balance = 1;
-    uint256 token1 = 1;
-    uint256 token2 = 2;
 
     function createStaking721() public virtual returns (IStaking721Mock);
+
+    function withdrawAll(uint256[] memory tokenIds) public virtual;
 
     function setUp() public {
         erc721 = new ERC721Impl();
         erc20 = new ERC20Impl();
         staking721 = createStaking721();
-        erc721.mint(token1);
-        erc721.mint(token2);
+        for (uint256 tokenId = 1; tokenId <= 20; tokenId++) {
+            erc721.mint(tokenId);
+        }
         erc721.setApprovalForAll(address(staking721), true);
         // Set to non-zero so that gas reporting is not affected too much by setting the balance from zero to non-zero
         erc20.mint(address(this), initialERC20Balance);
@@ -33,19 +34,19 @@ abstract contract Staking721Test is Test, IERC721Receiver {
     function testInitialStake() public {
         staking721.setStakingCondition(1 days, 10 ether);
         uint256[] memory tokenIds = new uint256[](1);
-        tokenIds[0] = token1;
+        tokenIds[0] = 1;
         staking721.stake(tokenIds);
     }
 
     function testSecondStakeInSameCondition() public {
         staking721.setStakingCondition(1 days, 10 ether);
         uint256[] memory tokenIds = new uint256[](1);
-        tokenIds[0] = token1;
+        tokenIds[0] = 1;
         vm.pauseGasMetering();
         staking721.stake(tokenIds);
         vm.resumeGasMetering();
         vm.warp(block.timestamp + 1 days);
-        tokenIds[0] = token2;
+        tokenIds[0] = 2;
         staking721.stake(tokenIds);
 
         // Sanity checking
@@ -57,13 +58,13 @@ abstract contract Staking721Test is Test, IERC721Receiver {
     function testSecondStakeInNextCondition() public {
         staking721.setStakingCondition(1 days, 10 ether);
         uint256[] memory tokenIds = new uint256[](1);
-        tokenIds[0] = token1;
+        tokenIds[0] = 1;
         vm.pauseGasMetering();
         staking721.stake(tokenIds);
         vm.resumeGasMetering();
         vm.warp(block.timestamp + 1 days);
         staking721.setStakingCondition(1 days, 5 ether);
-        tokenIds[0] = token2;
+        tokenIds[0] = 2;
         staking721.stake(tokenIds);
         vm.warp(block.timestamp + 1 days);
 
@@ -75,7 +76,7 @@ abstract contract Staking721Test is Test, IERC721Receiver {
     function testSecondStakersInitialStake() public {
         staking721.setStakingCondition(1 days, 10 ether);
         uint256[] memory tokenIds = new uint256[](1);
-        tokenIds[0] = token1;
+        tokenIds[0] = 1;
         vm.pauseGasMetering();
         staking721.stake(tokenIds);
         vm.resumeGasMetering();
@@ -90,27 +91,48 @@ abstract contract Staking721Test is Test, IERC721Receiver {
     function testWithdrawAllTokensInSameCondition() public {
         staking721.setStakingCondition(1 days, 5 ether);
         uint256[] memory tokenIds = new uint256[](2);
-        tokenIds[0] = token1;
-        tokenIds[1] = token2;
+        tokenIds[0] = 1;
+        tokenIds[1] = 2;
         staking721.stake(tokenIds);
         vm.warp(block.timestamp + 1 days);
-        staking721.withdraw(tokenIds);
+        withdrawAll(tokenIds);
 
         // Sanity checking
         vm.warp(block.timestamp + 1 days);
         staking721.claimRewards();
         assertEq(erc20.balanceOf(address(this)) - initialERC20Balance, 10 ether);
+        (uint256[] memory finalTokensStaked,) = staking721.getStakeInfo(address(this));
+        assertEq(finalTokensStaked.length, 0);
+    }
+
+    function testLargeWithdrawAllTokensInSameCondition() public {
+        staking721.setStakingCondition(1 days, 5 ether);
+        uint256 numTokens = 20;
+        uint256[] memory tokenIds = new uint256[](numTokens);
+        for (uint256 i = 0; i < numTokens; i++) {
+            tokenIds[i] = i + 1;
+        }
+        staking721.stake(tokenIds);
+        vm.warp(block.timestamp + 1 days);
+        withdrawAll(tokenIds);
+
+        // Sanity checking
+        vm.warp(block.timestamp + 1 days);
+        staking721.claimRewards();
+        assertEq(erc20.balanceOf(address(this)) - initialERC20Balance, numTokens * 5 ether);
+        (uint256[] memory finalTokensStaked,) = staking721.getStakeInfo(address(this));
+        assertEq(finalTokensStaked.length, 0);
     }
 
     function testWithdrawPartialTokensInSameCondition() public {
         staking721.setStakingCondition(1 days, 5 ether);
         uint256[] memory tokenIds = new uint256[](2);
-        tokenIds[0] = token1;
-        tokenIds[1] = token2;
+        tokenIds[0] = 1;
+        tokenIds[1] = 2;
         staking721.stake(tokenIds);
         vm.warp(block.timestamp + 1 days);
         uint256[] memory tokenIdsToWithdraw = new uint256[](1);
-        tokenIdsToWithdraw[0] = token1;
+        tokenIdsToWithdraw[0] = 1;
         staking721.withdraw(tokenIdsToWithdraw);
 
         // Sanity checking
@@ -122,7 +144,7 @@ abstract contract Staking721Test is Test, IERC721Receiver {
     function testClaimRewardsInSameCondition() public {
         staking721.setStakingCondition(1 days, 10 ether);
         uint256[] memory tokenIds = new uint256[](1);
-        tokenIds[0] = token1;
+        tokenIds[0] = 1;
         staking721.stake(tokenIds);
         vm.warp(block.timestamp + 1 days);
         staking721.claimRewards();

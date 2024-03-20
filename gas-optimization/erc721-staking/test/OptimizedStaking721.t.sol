@@ -10,4 +10,9 @@ contract OptimizedStaking721Test is Staking721Test {
     function createStaking721() public override returns (IStaking721Mock) {
         return new OptimizedStaking721Impl(address(erc721), address(erc20));
     }
+
+    function withdrawAll(uint256[] memory tokenIds) public override {
+        uint256[] memory _tokenIds = new uint256[](0);
+        staking721.withdraw(_tokenIds);
+    }
 }

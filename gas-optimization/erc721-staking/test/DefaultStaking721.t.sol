@@ -10,4 +10,8 @@ contract DefaultStaking721Test is Staking721Test {
     function createStaking721() public override returns (IStaking721Mock) {
         return new DefaultStaking721Impl(address(erc721), address(erc20));
     }
+
+    function withdrawAll(uint256[] memory tokenIds) public override {
+        staking721.withdraw(tokenIds);
+    }
 }
