@@ -17,17 +17,11 @@ abstract contract OptimizedStaking721 is ReentrancyGuard, IStaking721 {
     ///@dev Address of ERC721 NFT contract -- staked tokens belong to this contract.
     address public immutable stakingToken;
 
-    /// @dev Flag to check direct transfers of staking tokens.
-    uint8 internal isStaking = 1;
-
     ///@dev Next staking condition Id. Tracks number of conditon updates so far.
     uint64 private nextConditionId;
 
     ///@dev List of token-ids ever staked.
     uint256[] public indexedTokens;
-
-    /// @dev List of accounts that have staked their NFTs.
-    address[] public stakersArray;
 
     ///@dev Mapping from token-id to whether it is indexed or not.
     mapping(uint256 => bool) public isIndexed;
@@ -180,14 +174,11 @@ abstract contract OptimizedStaking721 is ReentrancyGuard, IStaking721 {
         if (stakers[_stakeMsgSender()].amountStaked > 0) {
             _updateUnclaimedRewardsForStaker(_stakeMsgSender());
         } else {
-            stakersArray.push(_stakeMsgSender());
             stakers[_stakeMsgSender()].timeOfLastUpdate = uint128(block.timestamp);
             stakers[_stakeMsgSender()].conditionIdOflastUpdate = nextConditionId - 1;
         }
         for (uint256 i = 0; i < len; ++i) {
-            isStaking = 2;
             IERC721(_stakingToken).safeTransferFrom(_stakeMsgSender(), address(this), _tokenIds[i]);
-            isStaking = 1;
 
             stakerAddress[_tokenIds[i]] = _stakeMsgSender();
 
@@ -212,16 +203,6 @@ abstract contract OptimizedStaking721 is ReentrancyGuard, IStaking721 {
 
         _updateUnclaimedRewardsForStaker(_stakeMsgSender());
 
-        if (_amountStaked == len) {
-            address[] memory _stakersArray = stakersArray;
-            for (uint256 i = 0; i < _stakersArray.length; ++i) {
-                if (_stakersArray[i] == _stakeMsgSender()) {
-                    stakersArray[i] = _stakersArray[_stakersArray.length - 1];
-                    stakersArray.pop();
-                    break;
-                }
-            }
-        }
         stakers[_stakeMsgSender()].amountStaked -= len;
 
         for (uint256 i = 0; i < len; ++i) {

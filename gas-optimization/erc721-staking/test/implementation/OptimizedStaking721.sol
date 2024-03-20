@@ -8,7 +8,7 @@ import {ERC20Impl} from "./ERC20.sol";
 import {OptimizedStaking721} from "../../src/OptimizedStaking721.sol";
 
 contract OptimizedStaking721Impl is IStaking721Mock, OptimizedStaking721, IERC721Receiver {
-    address public rewardToken;
+    address private immutable rewardToken;
 
     constructor(address _stakingToken, address _rewardToken) OptimizedStaking721(_stakingToken) {
         rewardToken = _rewardToken;

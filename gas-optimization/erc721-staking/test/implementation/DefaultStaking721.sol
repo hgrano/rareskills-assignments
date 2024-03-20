@@ -8,10 +8,10 @@ import {ERC20Impl} from "./ERC20.sol";
 import {Staking721} from "../../src/Staking721.sol";
 
 contract DefaultStaking721Impl is IStaking721Mock, Staking721, IERC721Receiver {
-    address public rewardTokenAddress;
+    address private immutable rewardToken;
 
-    constructor(address _stakingToken, address _rewardTokenAddress) Staking721(_stakingToken) {
-        rewardTokenAddress = _rewardTokenAddress;
+    constructor(address _stakingToken, address _rewardToken) Staking721(_stakingToken) {
+        rewardToken = _rewardToken;
     }
 
     function _canSetStakeConditions() internal view override returns (bool) {
@@ -19,7 +19,7 @@ contract DefaultStaking721Impl is IStaking721Mock, Staking721, IERC721Receiver {
     }
 
     function _mintRewards(address _staker, uint256 _rewards) internal override {
-        ERC20Impl(rewardTokenAddress).mint(_staker, _rewards);
+        ERC20Impl(rewardToken).mint(_staker, _rewards);
     }
 
     // Method is not needed for testing gas optimization
