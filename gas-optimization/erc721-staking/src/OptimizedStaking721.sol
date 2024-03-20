@@ -276,20 +276,21 @@ abstract contract OptimizedStaking721 is IStaking721 {
         uint256 _timeOfLastUpdate = staker.timeOfLastUpdate;
         uint256 _rewards256;
 
-        for (uint256 i = _stakerConditionId; i < _nextConditionId; i += 1) {
-            OptimizedStakingCondition memory condition = stakingConditions[i];
+        unchecked { // Index increments are safe, math is safe due to size of timestamps and amount staked
+            for (uint256 i = _stakerConditionId; i < _nextConditionId; i += 1) {
+                OptimizedStakingCondition memory condition = stakingConditions[i];
 
-            uint256 startTime = i != _stakerConditionId ? condition.startTimestamp : _timeOfLastUpdate;
-            uint256 endTime = condition.endTimestamp != 0 ? condition.endTimestamp : block.timestamp;
+                uint256 startTime = i != _stakerConditionId ? condition.startTimestamp : _timeOfLastUpdate;
+                uint256 endTime = condition.endTimestamp != 0 ? condition.endTimestamp : block.timestamp;
 
-            // May be able to remove tryMul/tryAdd by reducing size of the `amountStaked` and `rewardsPerUnitTime` variables
-            (bool noOverflowProduct, uint256 rewardsProduct) = Math.tryMul(
-                (endTime - startTime) * amountStaked,
-                condition.rewardsPerUnitTime
-            );
-            (bool noOverflowSum, uint256 rewardsSum) = Math.tryAdd(_rewards256, rewardsProduct / condition.timeUnit);
+                (bool noOverflowProduct, uint256 rewardsProduct) = Math.tryMul(
+                    (endTime - startTime) * amountStaked,
+                    condition.rewardsPerUnitTime
+                );
+                (bool noOverflowSum, uint256 rewardsSum) = Math.tryAdd(_rewards256, rewardsProduct / condition.timeUnit);
 
-            _rewards256 = noOverflowProduct && noOverflowSum ? rewardsSum : _rewards256;
+                _rewards256 = noOverflowProduct && noOverflowSum ? rewardsSum : _rewards256;
+            }
         }
 
         if (_rewards256 > type(uint128).max) {

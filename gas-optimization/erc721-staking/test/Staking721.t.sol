@@ -139,6 +139,8 @@ abstract contract Staking721Test is Test, IERC721Receiver {
         vm.warp(block.timestamp + 1 days);
         staking721.claimRewards();
         assertEq(erc20.balanceOf(address(this)) - initialERC20Balance, 15 ether);
+        (uint256[] memory finalTokensStaked,) = staking721.getStakeInfo(address(this));
+        assertEq(finalTokensStaked.length, tokenIds.length - tokenIdsToWithdraw.length);
     }
 
     function testClaimRewardsInSameCondition() public {
