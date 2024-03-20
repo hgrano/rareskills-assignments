@@ -11,9 +11,16 @@ import "./interface/IStaking721.sol";
 abstract contract OptimizedStaking721 is IStaking721 {
     struct OptimizedStaker {
         uint40 conditionIdOflastUpdate;
-        uint88 timeOfLastUpdate;
+        uint48 timeOfLastUpdate;
         uint128 unclaimedRewards;
         uint256[] tokensStaked;
+    }
+
+    struct OptimizedStakingCondition {
+        uint32 timeUnit;
+        uint128 rewardsPerUnitTime;
+        uint48 startTimestamp;
+        uint48 endTimestamp;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -30,7 +37,7 @@ abstract contract OptimizedStaking721 is IStaking721 {
     mapping(address => OptimizedStaker) public stakers;
 
     ///@dev Mapping from condition Id to staking condition. See {struct IStaking721.StakingCondition}
-    mapping(uint256 => StakingCondition) private stakingConditions;
+    mapping(uint256 => OptimizedStakingCondition) private stakingConditions;
 
     constructor(address _stakingToken) {
         require(address(_stakingToken) != address(0), "collection address 0");
@@ -82,12 +89,12 @@ abstract contract OptimizedStaking721 is IStaking721 {
      *
      *  @param _timeUnit    New time unit.
      */
-    function setTimeUnit(uint256 _timeUnit) external virtual {
+    function setTimeUnit(uint32 _timeUnit) external virtual {
         if (!_canSetStakeConditions()) {
             revert("Not authorized");
         }
 
-        StakingCondition memory condition = stakingConditions[nextConditionId - 1];
+        OptimizedStakingCondition memory condition = stakingConditions[nextConditionId - 1];
         require(_timeUnit != condition.timeUnit, "Time-unit unchanged.");
 
         _setStakingCondition(_timeUnit, condition.rewardsPerUnitTime);
@@ -104,12 +111,12 @@ abstract contract OptimizedStaking721 is IStaking721 {
      *
      *  @param _rewardsPerUnitTime    New rewards per unit time.
      */
-    function setRewardsPerUnitTime(uint256 _rewardsPerUnitTime) external virtual {
+    function setRewardsPerUnitTime(uint128 _rewardsPerUnitTime) external virtual {
         if (!_canSetStakeConditions()) {
             revert("Not authorized");
         }
 
-        StakingCondition memory condition = stakingConditions[nextConditionId - 1];
+        OptimizedStakingCondition memory condition = stakingConditions[nextConditionId - 1];
         require(_rewardsPerUnitTime != condition.rewardsPerUnitTime, "Reward unchanged.");
 
         _setStakingCondition(condition.timeUnit, _rewardsPerUnitTime);
@@ -132,11 +139,11 @@ abstract contract OptimizedStaking721 is IStaking721 {
         _rewards = _availableRewards(_staker);
     }
 
-    function getTimeUnit() public view returns (uint256 _timeUnit) {
+    function getTimeUnit() public view returns (uint32 _timeUnit) {
         _timeUnit = stakingConditions[nextConditionId - 1].timeUnit;
     }
 
-    function getRewardsPerUnitTime() public view returns (uint256 _rewardsPerUnitTime) {
+    function getRewardsPerUnitTime() public view returns (uint128 _rewardsPerUnitTime) {
         _rewardsPerUnitTime = stakingConditions[nextConditionId - 1].rewardsPerUnitTime;
     }
 
@@ -146,7 +153,7 @@ abstract contract OptimizedStaking721 is IStaking721 {
 
     /// @dev Staking logic. Override to add custom logic.
     function _stake(uint256[] calldata _tokenIds) internal virtual {
-        uint64 len = uint64(_tokenIds.length);
+        uint256 len = _tokenIds.length;
         require(len != 0, "Staking 0 tokens");
 
         address _stakingToken = stakingToken;
@@ -154,7 +161,7 @@ abstract contract OptimizedStaking721 is IStaking721 {
         if (stakers[_stakeMsgSender()].tokensStaked.length > 0) {
             _updateUnclaimedRewardsForStaker(_stakeMsgSender());
         } else {
-            stakers[_stakeMsgSender()].timeOfLastUpdate = uint88(block.timestamp);
+            stakers[_stakeMsgSender()].timeOfLastUpdate = uint48(block.timestamp);
             stakers[_stakeMsgSender()].conditionIdOflastUpdate = nextConditionId - 1;
         }
         for (uint256 i = 0; i < len; ++i) {
@@ -170,7 +177,7 @@ abstract contract OptimizedStaking721 is IStaking721 {
     function _withdraw(uint256[] calldata _tokenIds) internal virtual {
         uint256[] storage tokensStaked = stakers[_stakeMsgSender()].tokensStaked;
         uint256 _amountStaked = tokensStaked.length;
-        uint64 len = uint64(_tokenIds.length);
+        uint256 len = _tokenIds.length;
         // We re-design the logic so that if the user wants to withdraw all tokens they can supply a zero-length array
         // to indicate this, and consequently we can optimize the implementation
         require(_amountStaked >= len || len == 0, "Withdrawing more than staked");
@@ -179,28 +186,28 @@ abstract contract OptimizedStaking721 is IStaking721 {
 
         _updateUnclaimedRewardsForStaker(_stakeMsgSender());
 
-        if (len > 0) {
-            for (uint256 i = 0; i < len; ++i) {
-                uint256 tokensStakedLen = tokensStaked.length;
-                for (uint256 stakedIndex = 0; stakedIndex < tokensStakedLen; ++stakedIndex) {
-                    if (tokensStaked[stakedIndex] == _tokenIds[i]) {
-                        tokensStaked[stakedIndex] = tokensStaked[tokensStakedLen - 1];
-                        tokensStaked.pop();
-                        break;
-                    } else {
-                        unchecked {
+        unchecked { // Only index increments/decrements done in this block (which are bounded correctly)
+            if (len > 0) {
+                for (uint256 i = 0; i < len; ++i) {
+                    uint256 tokensStakedLen = tokensStaked.length;
+                    for (uint256 stakedIndex = 0; stakedIndex < tokensStakedLen; ++stakedIndex) {
+                        if (tokensStaked[stakedIndex] == _tokenIds[i]) {
+                            tokensStaked[stakedIndex] = tokensStaked[tokensStakedLen - 1];
+                            tokensStaked.pop();
+                            break;
+                        } else {
                             require(stakedIndex < tokensStakedLen - 1, "Token not staked by sender");
                         }
                     }
+                    IERC721(_stakingToken).safeTransferFrom(address(this), _stakeMsgSender(), _tokenIds[i]);
+                }   
+            } else {
+                uint256[] memory _tokensStaked = tokensStaked;
+                uint256 tokensStakedLen = _tokensStaked.length;
+                delete stakers[_stakeMsgSender()].tokensStaked;
+                for (uint256 stakedIndex = 0; stakedIndex < tokensStakedLen; ++stakedIndex) {
+                    IERC721(_stakingToken).safeTransferFrom(address(this), _stakeMsgSender(), _tokensStaked[stakedIndex]);
                 }
-                IERC721(_stakingToken).safeTransferFrom(address(this), _stakeMsgSender(), _tokenIds[i]);
-            }
-        } else {
-            uint256[] memory _tokensStaked = tokensStaked;
-            uint256 tokensStakedLen = _tokensStaked.length;
-            delete stakers[_stakeMsgSender()].tokensStaked;
-            for (uint256 stakedIndex = 0; stakedIndex < tokensStakedLen; ++stakedIndex) {
-                IERC721(_stakingToken).safeTransferFrom(address(this), _stakeMsgSender(), _tokensStaked[stakedIndex]);
             }
         }
 
@@ -213,7 +220,7 @@ abstract contract OptimizedStaking721 is IStaking721 {
 
         require(rewards != 0, "No rewards");
 
-        stakers[_stakeMsgSender()].timeOfLastUpdate = uint88(block.timestamp);
+        stakers[_stakeMsgSender()].timeOfLastUpdate = uint48(block.timestamp);
         stakers[_stakeMsgSender()].unclaimedRewards = 0;
         stakers[_stakeMsgSender()].conditionIdOflastUpdate = nextConditionId - 1;
 
@@ -235,25 +242,27 @@ abstract contract OptimizedStaking721 is IStaking721 {
     function _updateUnclaimedRewardsForStaker(address _staker) internal virtual {
         uint128 rewards = _calculateRewards(_staker);
         stakers[_staker].unclaimedRewards += rewards;
-        stakers[_staker].timeOfLastUpdate = uint88(block.timestamp);
+        stakers[_staker].timeOfLastUpdate = uint48(block.timestamp);
         stakers[_staker].conditionIdOflastUpdate = nextConditionId - 1;
     }
 
     /// @dev Set staking conditions.
-    function _setStakingCondition(uint256 _timeUnit, uint256 _rewardsPerUnitTime) internal virtual {
+    function _setStakingCondition(uint32 _timeUnit, uint128 _rewardsPerUnitTime) internal virtual {
         require(_timeUnit != 0, "time-unit can't be 0");
         uint256 conditionId = nextConditionId;
         nextConditionId += 1;
 
-        stakingConditions[conditionId] = StakingCondition({
+        stakingConditions[conditionId] = OptimizedStakingCondition({
             timeUnit: _timeUnit,
             rewardsPerUnitTime: _rewardsPerUnitTime,
-            startTimestamp: block.timestamp,
+            startTimestamp: uint48(block.timestamp),
             endTimestamp: 0
         });
 
         if (conditionId > 0) {
-            stakingConditions[conditionId - 1].endTimestamp = block.timestamp;
+            unchecked { 
+                stakingConditions[conditionId - 1].endTimestamp = uint48(block.timestamp);
+            }
         }
     }
 
@@ -268,11 +277,12 @@ abstract contract OptimizedStaking721 is IStaking721 {
         uint256 _rewards256;
 
         for (uint256 i = _stakerConditionId; i < _nextConditionId; i += 1) {
-            StakingCondition memory condition = stakingConditions[i];
+            OptimizedStakingCondition memory condition = stakingConditions[i];
 
             uint256 startTime = i != _stakerConditionId ? condition.startTimestamp : _timeOfLastUpdate;
             uint256 endTime = condition.endTimestamp != 0 ? condition.endTimestamp : block.timestamp;
 
+            // May be able to remove tryMul/tryAdd by reducing size of the `amountStaked` and `rewardsPerUnitTime` variables
             (bool noOverflowProduct, uint256 rewardsProduct) = Math.tryMul(
                 (endTime - startTime) * amountStaked,
                 condition.rewardsPerUnitTime

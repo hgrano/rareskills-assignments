@@ -27,7 +27,7 @@ contract DefaultStaking721Impl is IStaking721Mock, Staking721, IERC721Receiver {
         revert("Unsupported function");
     }
 
-    function setStakingCondition(uint256 _timeUnit, uint256 _rewardsPerUnitTime) external {
+    function setStakingCondition(uint32 _timeUnit, uint128 _rewardsPerUnitTime) external {
         _setStakingCondition(_timeUnit, _rewardsPerUnitTime);
     }
 
