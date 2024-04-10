@@ -143,6 +143,26 @@ abstract contract Staking721Test is Test, IERC721Receiver {
         assertEq(finalTokensStaked.length, tokenIds.length - tokenIdsToWithdraw.length);
     }
 
+    function testWithdrawTokensWithLargeNumberOfUsers() public {
+        staking721.setStakingCondition(1 days, 5 ether);
+        uint256[] memory tokenIds = new uint256[](1);
+
+        for (uint160 addr = 1; addr <= 500; addr++) {
+            vm.startPrank(address(addr));
+            uint256 tokenId = addr + 1000;
+            erc721.mint(tokenId);
+            erc721.setApprovalForAll(address(staking721), true);
+            tokenIds[0] = tokenId;
+            staking721.stake(tokenIds);
+            vm.stopPrank();
+        }
+
+        tokenIds[0] = 1;
+        staking721.stake(tokenIds);
+        vm.warp(block.timestamp + 1 days);
+        staking721.withdraw(tokenIds);
+    }
+
     function testClaimRewardsInSameCondition() public {
         staking721.setStakingCondition(1 days, 10 ether);
         uint256[] memory tokenIds = new uint256[](1);

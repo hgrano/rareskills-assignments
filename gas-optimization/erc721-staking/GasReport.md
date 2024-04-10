@@ -122,6 +122,7 @@ settings used by Foundry were not changed.
 | `withdraw` | Withdraw all (2) tokens staked (and the staking condition has not changed since the user last called `stake`) | 39,301 | 16,887 |
 | `withdraw` | Withdraw all (20) tokens staked (and the staking condition has not changed since the user last called `stake`) | 150,351 | 121,562 |
 | `withdraw` | Withdraw one of two tokens staked (and the staking condition has not changed since the user last called `stake`) | 31,655 | 11,288 |
+| `withdraw` | Withdraw one of one tokens staked when 500 other users currently have their tokens staked | 189,571 | 11,306 |
 | `claimRewards` | Claim rewards for the token staked (and the staking condition has not changed since the user called `stake`) | 22,993 | 19,958 |
 
 The rewards were distributed via minting ERC20 tokens using the default OpenZeppelin ERC20 implementation. The users
