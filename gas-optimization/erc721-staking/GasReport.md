@@ -1,5 +1,115 @@
 ## Gas Usage Report
 
+### Areas for improvement
+
+We can reduce storage needed for each staker and staking condition. Also, each `Staker` can store the array of
+`tokenStaked` by removing the one large array of tokens staked by all users.
+
+```diff
+-struct Staker {
+-    uint64 amountStaked;
+-    uint64 conditionIdOflastUpdate;
+-    uint128 timeOfLastUpdate;
+-    uint256 unclaimedRewards;
++struct OptimizedStaker {
++    uint40 conditionIdOflastUpdate;
++    uint48 timeOfLastUpdate;
++    uint128 unclaimedRewards;
++    uint256[] tokensStaked;
+ }
+ 
+-struct StakingCondition {
+-    uint256 timeUnit;
+-    uint256 rewardsPerUnitTime;
+-    uint256 startTimestamp;
+-    uint256 endTimestamp;
++struct OptimizedStakingCondition {
++    uint32 timeUnit;
++    uint128 rewardsPerUnitTime;
++    uint48 startTimestamp;
++    uint48 endTimestamp;
+ }
+```
+
+Storage variables can re-factored. The internal `isStaking` variable is not used in the contract - if contracts which
+inherit `Staking721` need this type of flag, then it should be implemented on them, rather than the base contract. That
+would give more flexibility to developers to choose to optimize their implementation or use this feature if necessary.
+The public arrays (`stakersArray` and `indexedTokens`) do not appear to be necessary except for reading this data -
+perhaps from a UI - so these could be instead derived off-chain using events.
+
+```diff
+-    /// @dev Flag to check direct transfers of staking tokens.
+-    uint8 internal isStaking = 1;
+-
+     ///@dev Next staking condition Id. Tracks number of conditon updates so far.
+-    uint64 private nextConditionId;
+-
+-    ///@dev List of token-ids ever staked.
+-    uint256[] public indexedTokens;
+-
+-    /// @dev List of accounts that have staked their NFTs.
+-    address[] public stakersArray;
+-
+-    ///@dev Mapping from token-id to whether it is indexed or not.
+-    mapping(uint256 => bool) public isIndexed;
++    uint40 private nextConditionId;
+ 
+     ///@dev Mapping from staker address to Staker struct. See {struct IStaking721.Staker}.
+-    mapping(address => Staker) public stakers;
+-
+-    /// @dev Mapping from staked token-id to staker address.
+-    mapping(uint256 => address) public stakerAddress;
++    mapping(address => OptimizedStaker) public stakers;
+ 
+     ///@dev Mapping from condition Id to staking condition. See {struct IStaking721.StakingCondition}
+-    mapping(uint256 => StakingCondition) private stakingConditions;
++    mapping(uint256 => OptimizedStakingCondition) private stakingConditions;
+```
+
+Re-entrancy guards can be removed from this contract. These can be added by contracts which inerhit `Stakaing721` if
+they are actually necessary.
+
+We can reduce gas costs of the `_stake` function by not needing to update the public
+arrays mentioned previously.
+
+```diff
+     function _stake(uint256[] calldata _tokenIds) internal virtual {
+-        uint64 len = uint64(_tokenIds.length);
++        uint256 len = _tokenIds.length;
+         require(len != 0, "Staking 0 tokens");
+ 
+         address _stakingToken = stakingToken;
+ 
+-        if (stakers[_stakeMsgSender()].amountStaked > 0) {
++        if (stakers[_stakeMsgSender()].tokensStaked.length > 0) {
+             _updateUnclaimedRewardsForStaker(_stakeMsgSender());
+         } else {
+-            stakersArray.push(_stakeMsgSender());
+-            stakers[_stakeMsgSender()].timeOfLastUpdate = uint128(block.timestamp);
++            stakers[_stakeMsgSender()].timeOfLastUpdate = uint48(block.timestamp);
+             stakers[_stakeMsgSender()].conditionIdOflastUpdate = nextConditionId - 1;
+         }
+         for (uint256 i = 0; i < len; ++i) {
+-            isStaking = 2;
+             IERC721(_stakingToken).safeTransferFrom(_stakeMsgSender(), address(this), _tokenIds[i]);
+-            isStaking = 1;
+-
+-            stakerAddress[_tokenIds[i]] = _stakeMsgSender();
+ 
+-            if (!isIndexed[_tokenIds[i]]) {
+-                isIndexed[_tokenIds[i]] = true;
+-                indexedTokens.push(_tokenIds[i]);
+-            }
++            stakers[_stakeMsgSender()].tokensStaked.push(_tokenIds[i]);
+         }
+-        stakers[_stakeMsgSender()].amountStaked += len;
+ 
+         emit TokensStaked(_stakeMsgSender(), _tokenIds);
+     }
+```
+
+### Test results
+
 Here is a comparison between the original `Staking721` contract and the optimized version. The default optimization
 settings used by Foundry were not changed.
 
