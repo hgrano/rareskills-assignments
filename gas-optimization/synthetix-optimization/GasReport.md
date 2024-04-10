@@ -1,5 +1,46 @@
 ## Gas Usage Report
 
+### Areas for improvement
+
+Storage variables can be made immutable or compacted, as 256 bits is not necessary for most of these values:
+
+```diff
+-    IERC20 public rewardsToken;
+-    IERC20 public stakingToken;
+-    uint256 public periodFinish = 0;
+-    uint256 public rewardRate = 0;
+-    uint256 public rewardsDuration = 7 days;
+-    uint256 public lastUpdateTime;
++    IERC20 public immutable rewardsToken;
++    IERC20 public immutable stakingToken;
++
++    uint152 public rewardRate = 0; // Max value is approx. 5.7 * 10**27 tokens per second (assuming 18 decimals)
++    uint24 public rewardsDuration = 7 days; // Max value is approx. 194 days
++    uint40 public periodFinish = 0; // Max value is approx. 34,800 years
++    uint40 public lastUpdateTime; // Max value is approx. 34,800 years
+```
+
+If assume the ERC20 contract used is trustworthy (since the owner sets this on deployment), the `ReentrancyGuard` is
+not necessary. Also, unchecked arithmetic can be used as everything should stay under the supply cap of the ERC20
+token:
+
+```diff
+-    function stake(uint256 amount) external nonReentrant notPaused updateReward(msg.sender) {
++    function stake(uint256 amount) external notPaused updateReward(msg.sender) { // nonReentrant modifier not needed if we use trusted ERC20 tokens
+         require(amount > 0, "Cannot stake 0");
+-        _totalSupply = _totalSupply + amount;
+-        _balances[msg.sender] = _balances[msg.sender] + amount;
+         stakingToken.safeTransferFrom(msg.sender, address(this), amount);
++        unchecked { // msg.sender cannot own more than total supply of the staking token, so unchecked is safe
++            _totalSupply = _totalSupply + amount;
++            _balances[msg.sender] = _balances[msg.sender] + amount;
++        }
+         emit Staked(msg.sender, amount);
+     }
+```
+
+### Test results
+
 Here is a comparison between the original `StakingRewards` contract and the optimized version. The default
 optimization settings used by Foundry were not changed. Each reported gas value measures the execution cost of a single
 invocation of the method as reported by `forge`.
