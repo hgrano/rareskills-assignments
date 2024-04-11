@@ -20,7 +20,7 @@ Storage variables can be made immutable or compacted, as 256 bits is not necessa
 +    uint40 public lastUpdateTime; // Max value is approx. 34,800 years
 ```
 
-If assume the ERC20 contract used is trustworthy (since the owner sets this on deployment), the `ReentrancyGuard` is
+If we assume the ERC20 contract used is trustworthy (since the owner sets this on deployment), the `ReentrancyGuard` is
 not necessary. Also, unchecked arithmetic can be used as everything should stay under the supply cap of the ERC20
 token:
 
