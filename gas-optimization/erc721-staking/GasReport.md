@@ -31,7 +31,7 @@ We can reduce storage needed for each staker and staking condition. Also, each `
  }
 ```
 
-Storage variables can re-factored. The internal `isStaking` variable is not used in the contract - if contracts which
+Storage variables can re-factored. The internal `isStaking` variable is not used in the contract - if contracts that
 inherit `Staking721` need this type of flag, then it should be implemented on them, rather than the base contract. That
 would give more flexibility to developers to choose to optimize their implementation or use this feature if necessary.
 The public arrays (`stakersArray` and `indexedTokens`) do not appear to be necessary except for reading this data -
@@ -66,8 +66,8 @@ perhaps from a UI - so these could be instead derived off-chain using events.
 +    mapping(uint256 => OptimizedStakingCondition) private stakingConditions;
 ```
 
-Re-entrancy guards can be removed from this contract. These can be added by contracts which inerhit `Stakaing721` if
-they are actually necessary.
+Re-entrancy guards can be removed from this contract. These can be added by contracts which inherit `Staking721` if
+they are necessary.
 
 We can reduce gas costs of the `_stake` function by not needing to update the public
 arrays mentioned previously.
