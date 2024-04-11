@@ -203,9 +203,8 @@ abstract contract OptimizedStaking721 is IStaking721 {
                 }   
             } else {
                 uint256[] memory _tokensStaked = tokensStaked;
-                uint256 tokensStakedLen = _tokensStaked.length;
                 delete stakers[_stakeMsgSender()].tokensStaked;
-                for (uint256 stakedIndex = 0; stakedIndex < tokensStakedLen; ++stakedIndex) {
+                for (uint256 stakedIndex = 0; stakedIndex < _amountStaked; ++stakedIndex) {
                     IERC721(_stakingToken).safeTransferFrom(address(this), _stakeMsgSender(), _tokensStaked[stakedIndex]);
                 }
             }
