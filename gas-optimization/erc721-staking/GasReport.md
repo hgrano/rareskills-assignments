@@ -108,6 +108,66 @@ arrays mentioned previously.
      }
 ```
 
+Due to not needing to update large public arrays, we can optimize the `withdraw` function:
+
+```diff
+     function _withdraw(uint256[] calldata _tokenIds) internal virtual {
+-        uint256 _amountStaked = stakers[_stakeMsgSender()].amountStaked;
+-        uint64 len = uint64(_tokenIds.length);
+-        require(len != 0, "Withdrawing 0 tokens");
+-        require(_amountStaked >= len, "Withdrawing more than staked");
++        uint256[] storage tokensStaked = stakers[_stakeMsgSender()].tokensStaked;
++        uint256 _amountStaked = tokensStaked.length;
++        uint256 len = _tokenIds.length;
++        // We re-design the logic so that if the user wants to withdraw all tokens they can supply a zero-length array
++        // to indicate this, and consequently we can optimize the implementation
++        require(_amountStaked >= len || len == 0, "Withdrawing more than staked");
+ 
+         address _stakingToken = stakingToken;
+ 
+         _updateUnclaimedRewardsForStaker(_stakeMsgSender());
+ 
+-        if (_amountStaked == len) {
+-            address[] memory _stakersArray = stakersArray;
+-            for (uint256 i = 0; i < _stakersArray.length; ++i) {
+-                if (_stakersArray[i] == _stakeMsgSender()) {
+-                    stakersArray[i] = _stakersArray[_stakersArray.length - 1];
+-                    stakersArray.pop();
+-                    break;
++        unchecked { // Only index increments/decrements done in this block (which are bounded correctly)
++            if (len > 0) {
++                for (uint256 i = 0; i < len; ++i) {
++                    uint256 tokensStakedLen = tokensStaked.length;
++                    for (uint256 stakedIndex = 0; stakedIndex < tokensStakedLen; ++stakedIndex) {
++                        if (tokensStaked[stakedIndex] == _tokenIds[i]) {
++                            tokensStaked[stakedIndex] = tokensStaked[tokensStakedLen - 1];
++                            tokensStaked.pop();
++                            break;
++                        } else {
++                            require(stakedIndex < tokensStakedLen - 1, "Token not staked by sender");
++                        }
++                    }
++                    IERC721(_stakingToken).safeTransferFrom(address(this), _stakeMsgSender(), _tokenIds[i]);
++                }   
++            } else {
++                uint256[] memory _tokensStaked = tokensStaked;
++                delete stakers[_stakeMsgSender()].tokensStaked;
++                for (uint256 stakedIndex = 0; stakedIndex < _amountStaked; ++stakedIndex) {
++                    IERC721(_stakingToken).safeTransferFrom(address(this), _stakeMsgSender(), _tokensStaked[stakedIndex]);
+                 }
+             }
+         }
+-        stakers[_stakeMsgSender()].amountStaked -= len;
+-
+-        for (uint256 i = 0; i < len; ++i) {
+-            require(stakerAddress[_tokenIds[i]] == _stakeMsgSender(), "Not staker");
+-            stakerAddress[_tokenIds[i]] = address(0);
+-            IERC721(_stakingToken).safeTransferFrom(address(this), _stakeMsgSender(), _tokenIds[i]);
+-        }
+         emit TokensWithdrawn(_stakeMsgSender(), _tokenIds);
+     }
+```
+
 ### Test results
 
 Here is a comparison between the original `Staking721` contract and the optimized version. The default optimization
