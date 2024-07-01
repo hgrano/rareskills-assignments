@@ -64,3 +64,6 @@
 [submodule "eip712/gasless-exchange/lib/forge-std"]
 	path = eip712/gasless-exchange/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
+[submodule "eip712/gasless-exchange/lib/openzeppelin-contracts"]
+	path = eip712/gasless-exchange/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
