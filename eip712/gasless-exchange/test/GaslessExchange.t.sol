@@ -9,7 +9,7 @@ contract GaslessExchangeTest is Test {
     GaslessExchange public exchange;
     TestERC20 public baseToken;
     TestERC20 public quoteToken;
-
+  
     bytes32 exchangeDomainSeparator;
  
     address public alice;
