@@ -10,6 +10,8 @@ contract GaslessExchangeTest is Test {
     TestERC20 public baseToken;
     TestERC20 public quoteToken;
 
+    bytes32 exchangeDomainSeparator;
+
     address public alice;
     uint256 public alicePk;
 
@@ -21,12 +23,23 @@ contract GaslessExchangeTest is Test {
         quoteToken = new TestERC20(10000 ether, address(this));
 
         exchange = new GaslessExchange(address(baseToken), address(quoteToken));
+        bytes32 domainTypeHash = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+        (,string memory name, string memory version, uint256 chainId, address verifyingContract, bytes32 salt,) = exchange.eip712Domain();
+        exchangeDomainSeparator = keccak256(
+            abi.encode(
+                domainTypeHash,
+                name,
+                version,
+                chainId,
+                verifyingContract
+            )
+        );
 
         (alice, alicePk) = makeAddrAndKey("alice");
         (bob, bobPk) = makeAddrAndKey("bob");
     }
 
     function testIncrement() public {
-        
+        // exchange.eip712Domain();
     }
 }
