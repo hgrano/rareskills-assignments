@@ -1,0 +1,15 @@
+{
+  "name": "gasless-exchange",
+  "version": "0.1.0",
+  "description": "Example of how to create a gasless exchange.",
+  "license": "MIT",
+  "scripts": {
+    "hash-struct": "node test/util/HashStruct.js"
+  },
+  "files": [
+    "src/**/*"
+  ],
+  "dependencies": {
+    "ethers": "^6.9.0"
+  }
+}

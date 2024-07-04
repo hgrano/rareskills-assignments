@@ -28,8 +28,8 @@ contract GaslessExchange is EIP712 {
     }
 
     struct OrderStatus {
-        uint8 ordered;
-        uint8 cancelled;
+        bool ordered;
+        bool cancelled;
         uint248 remaining;
     }
 
@@ -74,12 +74,12 @@ contract GaslessExchange is EIP712 {
         {
             OrderStatus memory buyOrderStatus = orders[buyOrderHash];
             require(
-                buyOrderStatus.ordered == 0 || (buyOrderStatus.cancelled == 0 && buyOrderStatus.remaining > 0),
+                !buyOrderStatus.ordered || (!buyOrderStatus.cancelled && buyOrderStatus.remaining > 0),
                 "Buy order must not have been cancelled or fully-filled already"
             );
 
             buyOrderRemaining = buyOrder.quantity;
-            if (buyOrderStatus.ordered > 0) {
+            if (buyOrderStatus.ordered) {
                 buyOrderRemaining = uint256(buyOrderStatus.remaining);
             }
         }
@@ -87,11 +87,11 @@ contract GaslessExchange is EIP712 {
         {
             OrderStatus memory sellOrderStatus = orders[sellOrderHash];
             require(
-                sellOrderStatus.ordered == 0 || (sellOrderStatus.cancelled == 0 && sellOrderStatus.remaining > 0),
+                !sellOrderStatus.ordered || (!sellOrderStatus.cancelled && sellOrderStatus.remaining > 0),
                 "Sell order must not have been cancelled or fully-filled already"
             );
             sellOrderRemaining = sellOrder.quantity;
-            if (sellOrderStatus.ordered > 0) {
+            if (sellOrderStatus.ordered) {
                 sellOrderRemaining = uint256(sellOrderStatus.remaining);
             }
         }
@@ -101,10 +101,10 @@ contract GaslessExchange is EIP712 {
         ) / DECIMALS_FACTOR;
 
         unchecked {
-            orders[buyOrderHash].ordered = 1;
+            orders[buyOrderHash].ordered = true;
             orders[buyOrderHash].remaining = uint248(buyOrderRemaining - maxBaseToken);
 
-            orders[sellOrderHash].ordered = 1;
+            orders[sellOrderHash].ordered = true;
             orders[sellOrderHash].remaining = uint248(sellOrderRemaining - maxBaseToken);
         }
 
