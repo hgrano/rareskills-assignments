@@ -12,7 +12,7 @@ contract GaslessExchangeTest is Test {
 
     bytes32 exchangeDomainSeparator;
 
-    address public alice2;
+    address public alice3;
     uint256 public alicePk;
 
     address public bob;
