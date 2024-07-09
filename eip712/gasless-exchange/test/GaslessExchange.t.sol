@@ -28,6 +28,8 @@ contract GaslessExchangeTest is Test {
     uint256 public sell1Expiry = 1722907158;
     bytes32 public sell1Hash = 0x4deded458ddda90d261676dbc108c27213f69af8e1cdabb5079274e8e9c3b61d;
 
+    bytes32 public sell2Hash = 0x4e139eb16a79d8f4ca21a7f8b93488ed150d196062ce8042117450fc2153f9de;
+
     function setUp() public {
         baseToken = new TestERC20(10000 ether, address(this));
         quoteToken = new TestERC20(10000 ether, address(this));
@@ -69,13 +71,9 @@ contract GaslessExchangeTest is Test {
     }
 
     function testSimple() public {
-        bytes memory aliceSig = sign(alicePk, keccak256(abi.encodePacked("\x19\x01", exchangeDomainSeparator, buy1Hash)));
-        bytes memory bobSig = sign(bobPk, keccak256(abi.encodePacked("\x19\x01", exchangeDomainSeparator, sell1Hash)));
         vm.warp(buy1Expiry - 1 hours);
 
-        GaslessExchange.BuyOrder memory buy1 = GaslessExchange.BuyOrder(alice, buy1Expiry, 0, 10 ether, 2 ether + (1 ether) / 100);
-        GaslessExchange.SellOrder memory sell1 = GaslessExchange.SellOrder(bob, sell1Expiry, 0, 5 ether, 1 ether + (99 ether) / 100);
-        exchange.matchOrders(buy1, aliceSig, sell1, bobSig);
+        exchange.matchOrders(buy1(), signTypedData(alicePk, buy1Hash), sell1(), signTypedData(bobPk, sell1Hash));
 
         assertEq(baseToken.balanceOf(alice), aliceBaseInitialBalance + 5 ether);
         assertEq(quoteToken.balanceOf(alice), aliceQuoteInitialBalance - 10 ether);
@@ -84,8 +82,43 @@ contract GaslessExchangeTest is Test {
         assertEq(quoteToken.balanceOf(bob), bobQuoteInitialBalance + 10 ether);
     }
 
+    function testReuseSignature() public {
+        vm.warp(buy1Expiry - 1 hours);
+
+        exchange.matchOrders(buy1(), signTypedData(alicePk, buy1Hash), sell1(), signTypedData(bobPk, sell1Hash));
+
+        vm.expectRevert();
+        exchange.matchOrders(buy1(), signTypedData(alicePk, buy1Hash), sell1(), signTypedData(bobPk, sell1Hash));
+
+        exchange.matchOrders(buy1(), signTypedData(alicePk, buy1Hash), sell2(), signTypedData(bobPk, sell2Hash));
+
+        assertEq(baseToken.balanceOf(alice), aliceBaseInitialBalance + 10 ether);
+        assertEq(quoteToken.balanceOf(alice), aliceQuoteInitialBalance - 20 ether);
+
+        assertEq(baseToken.balanceOf(bob), bobBaseInitialBalance - 10 ether);
+        assertEq(quoteToken.balanceOf(bob), bobQuoteInitialBalance + 20 ether);
+    }
+
     function sign(uint256 pk, bytes32 data) private pure returns (bytes memory) {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, data);
         return abi.encodePacked(r, s, v);
+    }
+
+    function signTypedData(uint256 pk, bytes32 structHash) private view returns (bytes memory) {
+        return sign(pk, keccak256(abi.encodePacked("\x19\x01", exchangeDomainSeparator, structHash)));
+    }
+
+    function buy1() private view returns (GaslessExchange.BuyOrder memory) {
+        return GaslessExchange.BuyOrder(alice, buy1Expiry, 0, 10 ether, 2 ether + (1 ether) / 100);
+    }
+
+    function sell1() private view returns (GaslessExchange.SellOrder memory) {
+        return GaslessExchange.SellOrder(bob, sell1Expiry, 0, 5 ether, 1 ether + (99 ether) / 100);
+    }
+
+    function sell2() private view returns (GaslessExchange.SellOrder memory) {
+        GaslessExchange.SellOrder memory sell = sell1();
+        sell.nonce++;
+        return sell;
     }
 }

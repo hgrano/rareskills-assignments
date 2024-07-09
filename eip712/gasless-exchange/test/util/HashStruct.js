@@ -69,5 +69,9 @@ const sell1 = {
     price: ethers.parseEther("1.99")
 };
 
+const sell2 = {...sell1};
+sell2.nonce++;
+
 console.log('buy1Hash = ', ethers.TypedDataEncoder.hashStruct('BuyOrder', {BuyOrder}, buy1));
 console.log('sell1Hash = ', ethers.TypedDataEncoder.hashStruct('SellOrder', {SellOrder}, sell1));
+console.log('sell2Hash = ', ethers.TypedDataEncoder.hashStruct('SellOrder', {SellOrder}, sell2));
