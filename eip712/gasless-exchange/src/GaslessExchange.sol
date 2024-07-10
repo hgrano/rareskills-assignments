@@ -35,6 +35,9 @@ contract GaslessExchange is EIP712 {
         uint248 remaining;
     }
 
+    // TODO events
+    // TODO order cancellation
+
     IERC20 public immutable baseToken;
     IERC20 public immutable quoteToken; // Prices of the base token are measured in units of the quote token
 
@@ -86,6 +89,8 @@ contract GaslessExchange is EIP712 {
             buyOrderRemaining = buyOrder.quantity;
             if (buyOrderStatus.ordered) {
                 buyOrderRemaining = uint256(buyOrderStatus.remaining);
+            } else {
+                require(buyOrder.quantity <= type(uint248).max, "Buy order quantity must not be larger than uint248");
             }
         }
         uint256 sellOrderRemaining;
@@ -98,17 +103,16 @@ contract GaslessExchange is EIP712 {
             sellOrderRemaining = sellOrder.quantity;
             if (sellOrderStatus.ordered) {
                 sellOrderRemaining = uint256(sellOrderStatus.remaining);
+            } else {
+                require(sellOrder.quantity <= type(uint248).max, "Sell order quantity must not be larger than uint248");
             }
         }
         uint256 maxBaseToken = Math.min(buyOrderRemaining, sellOrderRemaining);
         uint256 maxQuoteToken = ((buyOrder.price + sellOrder.price) >> 1) * maxBaseToken;
 
         unchecked {
-            orders[buyOrderHash].ordered = true;
-            orders[buyOrderHash].remaining = uint248(buyOrderRemaining - maxBaseToken);
-
-            orders[sellOrderHash].ordered = true;
-            orders[sellOrderHash].remaining = uint248(sellOrderRemaining - maxBaseToken);
+            orders[buyOrderHash] = OrderStatus(true, false, uint248(buyOrderRemaining - maxBaseToken));
+            orders[sellOrderHash] = OrderStatus(true, false, uint248(sellOrderRemaining - maxBaseToken));
         }
 
         quoteToken.safeTransferFrom(buyOrder.buyer, sellOrder.seller, maxQuoteToken / decimalsFactor);
