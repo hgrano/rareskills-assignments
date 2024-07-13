@@ -67,3 +67,6 @@
 [submodule "eip712/gasless-exchange/lib/openzeppelin-contracts"]
 	path = eip712/gasless-exchange/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "elliptic-curves-basics/fuzzy-identity/lib/forge-std"]
+	path = elliptic-curves-basics/fuzzy-identity/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
