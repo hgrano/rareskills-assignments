@@ -29,3 +29,8 @@ application/protocol. The `chainId` protects against signature re-use across dif
 restricts signatures so they are valid only for the specific contract they are intended for (one protocol could be
 composed of multiple contracts so this allows for selection of the appropriate contract). The `salt` is a last
 resort way to separate signatures used within the exact same contract but for different purposes.
+
+### Exercise 3
+
+1. `renounceOwnership()` (owner is set to the zero address)
+1. `claimAirdrop(0xFFFF...F, attackerAddress, 0, bytes32(0), bytes32(0))` (because the signature is invalid, the recovered address is zero)
