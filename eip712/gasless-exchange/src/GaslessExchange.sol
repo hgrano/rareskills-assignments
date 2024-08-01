@@ -35,7 +35,15 @@ contract GaslessExchange is EIP712 {
         uint248 remaining;
     }
 
-    // TODO events
+    event OrdersMatched(
+        address indexed buyer,
+        address indexed seller,
+        uint256 quantity,
+        uint256 price,
+        bytes32 buyOrderHash,
+        bytes32 sellOrderHash
+    );
+
     // TODO order cancellation
 
     IERC20 public immutable baseToken;
@@ -108,7 +116,8 @@ contract GaslessExchange is EIP712 {
             }
         }
         uint256 maxBaseToken = Math.min(buyOrderRemaining, sellOrderRemaining);
-        uint256 maxQuoteToken = ((buyOrder.price + sellOrder.price) >> 1) * maxBaseToken;
+        uint256 price = (buyOrder.price + sellOrder.price) >> 1;
+        uint256 maxQuoteToken = price * maxBaseToken;
 
         unchecked {
             orders[buyOrderHash] = OrderStatus(true, false, uint248(buyOrderRemaining - maxBaseToken));
@@ -117,6 +126,8 @@ contract GaslessExchange is EIP712 {
 
         quoteToken.safeTransferFrom(buyOrder.buyer, sellOrder.seller, maxQuoteToken / decimalsFactor);
         baseToken.safeTransferFrom(sellOrder.seller, buyOrder.buyer, maxBaseToken);
+
+        emit OrdersMatched(buyOrder.buyer, sellOrder.seller, maxBaseToken, price, buyOrderHash, sellOrderHash);
     }
 
     function hashBuyOrder(BuyOrder memory buyOrder) internal pure returns (bytes32) {
