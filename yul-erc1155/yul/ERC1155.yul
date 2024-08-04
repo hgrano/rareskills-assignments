@@ -162,18 +162,18 @@ object "Token" {
             }
 
             function returnBalanceOfBatch(accountsPos, idsPos, length) {
-                mstore(0, 0x20)
-                mstore(0x20, length)
+                mstore(0x60, 0x20)
+                mstore(0x80, length)
 
                 let bytesLength := mul(0x20, length)
                 for { let offset := 0 } lt(offset, bytesLength) { offset := add(offset, 0x20) } {
                     let account := calldataload(add(accountsPos, offset))
                     let tokenId := calldataload(add(idsPos, offset))
 
-                    mstore(add(0x40, offset), balanceOf(account, tokenId))
+                    mstore(add(0xA0, offset), balanceOf(account, tokenId))
                 }
 
-                return (0, add(0x40, bytesLength))
+                return (0x60, add(0x40, bytesLength))
             }
 
             function checkAcceptance(account, from, id, value, dataPos, dataLength) {
