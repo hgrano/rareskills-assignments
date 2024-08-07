@@ -3,6 +3,7 @@ pragma solidity 0.8.21;
 
 import {Test, console2} from "forge-std/Test.sol";
 import {NFTWithMerkleDiscount} from "../src/NFTWithMerkleDiscount.sol";
+import {NFTWithMerkleDiscountV2} from "../src/NFTWithMerkleDiscountV2.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 contract NFTWithMerkleDiscountTest is Test {
@@ -89,6 +90,23 @@ contract NFTWithMerkleDiscountTest is Test {
     //     nft.transferOwnership(address(this));
     //     nft
     // }
+
+    function test_upgrade() public {
+        NFTWithMerkleDiscountV2 nftV2 = new NFTWithMerkleDiscountV2();
+        bytes memory initV2 = abi.encodeCall(nftV2.initializeV2, ());
+        vm.expectRevert();
+        nft.upgradeToAndCall(address(nftV2), initV2);
+
+        vm.prank(owner);
+        nft.upgradeToAndCall(address(nftV2), initV2);
+
+        NFTWithMerkleDiscountV2 proxiedNftV2 = NFTWithMerkleDiscountV2(address(nft));
+        vm.prank(owner);
+        proxiedNftV2.mint(to0, tokenId0);
+        vm.prank(owner);
+        proxiedNftV2.forceTransferFrom(to0, to1, tokenId0);
+        assertEq(proxiedNftV2.ownerOf(tokenId0), to1, "NFT must be transfered");
+    }
 
     function hashPair(bytes32 a, bytes32 b) private pure returns (bytes32) {
         if (a < b) {

@@ -13,8 +13,8 @@ import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 /// @author Huw Grano
 /// @notice NFT which can be minted by addresses in a merkle tree
 contract NFTWithMerkleDiscount is ERC721Upgradeable, ERC2981Upgradeable, OwnableUpgradeable, UUPSUpgradeable {
-    bytes32 private merkleRoot;
-    BitMaps.BitMap private mintedBitMap;
+    bytes32 public merkleRoot;
+    BitMaps.BitMap internal mintedBitMap;
 
     function initialize(bytes32 merkleRoot_, address owner_) initializer public {
         __ERC721_init("MyNFT", "NFT42");
